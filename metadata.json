@@ -1,0 +1,7 @@
+{
+  "name": "mobeng portal 4 expo psy",
+  "description": "AI-powered recruitment simulator for Mobeng Store Leaders, evaluating candidates on Sales, Leadership, Operations, and CX.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
