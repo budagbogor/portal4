@@ -8,18 +8,18 @@ const getGenAI = () => {
   const localKey = localStorage.getItem('gemini_api_key');
   // VITE CHANGE: Use import.meta.env instead of process.env, with safety check
   const finalKey = localKey || (import.meta.env && import.meta.env.VITE_GEMINI_API_KEY) || '';
-  
+
   if (!finalKey) {
     console.warn("API Key is missing. Please configure it in settings or VITE_GEMINI_API_KEY env var.");
   }
-  
+
   return new GoogleGenAI({ apiKey: finalKey });
 };
 
 export const sendMessageToGemini = async (
   history: Message[],
   latestUserMessage: string,
-  systemInstruction: string 
+  systemInstruction: string
 ): Promise<{ text: string; analysis: AnalysisResult | null }> => {
   try {
     // Create instance dynamically to pick up new keys immediately
@@ -28,7 +28,7 @@ export const sendMessageToGemini = async (
     const chat = ai.chats.create({
       model: "gemini-3-flash-preview",
       config: {
-        systemInstruction: systemInstruction, 
+        systemInstruction: systemInstruction,
         temperature: 0.3, // Low temperature to reduce hallucinations
       },
       history: history.slice(0, -1).map(msg => ({
@@ -41,8 +41,8 @@ export const sendMessageToGemini = async (
       message: latestUserMessage
     });
 
-    const responseText = result.text;
-    
+    const responseText = result.text || ''; // Handle undefined
+
     // Updated Regex: More robust, allows spaces instead of strict newlines
     const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/);
     let analysis: AnalysisResult | null = null;
@@ -70,25 +70,25 @@ export const sendMessageToGemini = async (
 };
 
 interface FinalAnalysisReport {
-    summary: string;
-    psychometrics: BigFiveTraits;
-    cultureFitScore: number;
-    starMethodScore: number;
+  summary: string;
+  psychometrics: BigFiveTraits;
+  cultureFitScore: number;
+  starMethodScore: number;
 }
 
 export const generateFinalSummary = async (
-    profile: CandidateProfile,
-    role: string,
-    simScores: AssessmentScores,
-    simFeedback: string,
-    logicScore: number
+  profile: CandidateProfile,
+  role: string,
+  simScores: AssessmentScores,
+  simFeedback: string,
+  logicScore: number
 ): Promise<FinalAnalysisReport> => {
-    try {
-        // Create instance dynamically
-        const ai = getGenAI();
+  try {
+    // Create instance dynamically
+    const ai = getGenAI();
 
-        // UPDATED PROMPT: STRICT CORRELATION LOGIC + BEHAVIOR
-        const prompt = `
+    // UPDATED PROMPT: STRICT CORRELATION LOGIC + BEHAVIOR
+    const prompt = `
         Role: Expert I/O Psychologist & Senior Recruiter at Mobeng.
         Task: CRITICALLY analyze candidate performance by correlating COGNITIVE ABILITY (Logic Test) with BEHAVIORAL COMPETENCE (Interview).
         
@@ -152,37 +152,44 @@ export const generateFinalSummary = async (
         }
         `;
 
-        const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-                temperature: 0.3, // Explicitly set low temperature to prevent hallucinations
-            }
-        });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        temperature: 0.3, // Explicitly set low temperature to prevent hallucinations
+      }
+    });
 
-        const json = JSON.parse(response.text);
-        
-        return {
-            summary: json.summary,
-            psychometrics: {
-                openness: json.psychometrics.openness,
-                conscientiousness: json.psychometrics.conscientiousness,
-                extraversion: json.psychometrics.extraversion,
-                agreeableness: json.psychometrics.agreeableness,
-                neuroticism: json.psychometrics.emotionalStability 
-            },
-            cultureFitScore: json.cultureFitScore,
-            starMethodScore: json.starMethodScore
-        };
-
-    } catch (error) {
-        console.error("Error generating final summary:", error);
-        return {
-            summary: "Gagal membuat analisa. Data tidak cukup.",
-            psychometrics: { openness: 50, conscientiousness: 50, extraversion: 50, agreeableness: 50, neuroticism: 50 },
-            cultureFitScore: 50,
-            starMethodScore: 5
-        };
+    const jsonText = response.text || '{}'; // Handle undefined
+    let json;
+    try {
+      json = JSON.parse(jsonText);
+    } catch (e) {
+      console.error("Failed to parse final summary JSON", e);
+      throw e; // Trigger catch block below
     }
+
+    return {
+      summary: json.summary || "Analisa tidak tersedia.",
+      psychometrics: {
+        openness: json.psychometrics.openness,
+        conscientiousness: json.psychometrics.conscientiousness,
+        extraversion: json.psychometrics.extraversion,
+        agreeableness: json.psychometrics.agreeableness,
+        neuroticism: json.psychometrics.emotionalStability
+      },
+      cultureFitScore: json.cultureFitScore,
+      starMethodScore: json.starMethodScore
+    };
+
+  } catch (error) {
+    console.error("Error generating final summary:", error);
+    return {
+      summary: "Gagal membuat analisa. Data tidak cukup.",
+      psychometrics: { openness: 50, conscientiousness: 50, extraversion: 50, agreeableness: 50, neuroticism: 50 },
+      cultureFitScore: 50,
+      starMethodScore: 5
+    };
+  }
 }

@@ -841,7 +841,7 @@ function App() {
                                     onClick={() => setShowChatLog(!showChatLog)}
                                     className="w-full bg-slate-50 p-4 flex justify-between items-center text-sm font-bold text-slate-700 hover:bg-slate-100 transition-colors"
                                 >
-                                    <span className="flex items-center gap-2"><MessageSquareText size={16} /> Transcript Interview Lengkap</span>
+                                    <span className="flex items-center gap-2"><MessageSquare size={16} /> Transcript Interview Lengkap</span>
                                     {showChatLog ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                                 </button>
 
