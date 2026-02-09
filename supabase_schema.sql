@@ -35,15 +35,33 @@ CREATE TABLE IF NOT EXISTS used_tokens (
   used_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 
--- 3. Mengaktifkan Row Level Security (RLS) - Optional tapi disarankan
+-- 3. Tabel untuk menyimpan undangan dengan short code
+CREATE TABLE IF NOT EXISTS invitations (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  code TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  phone TEXT NOT NULL,
+  role TEXT NOT NULL,
+  expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  used BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+-- 4. Mengaktifkan Row Level Security (RLS) - Optional tapi disarankan
 -- Untuk demo ini, kita izinkan akses public (anon) untuk insert/select agar tidak perlu setup Auth user login
 ALTER TABLE submissions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE used_tokens ENABLE ROW LEVEL SECURITY;
+ALTER TABLE invitations ENABLE ROW LEVEL SECURITY;
 
 -- Policy: Izinkan siapa saja (anonim) untuk Insert data (Kandidat submit tes)
 CREATE POLICY "Enable insert for anon" ON submissions FOR INSERT WITH CHECK (true);
 CREATE POLICY "Enable insert for anon tokens" ON used_tokens FOR INSERT WITH CHECK (true);
+CREATE POLICY "Enable insert for anon invitations" ON invitations FOR INSERT WITH CHECK (true);
 
 -- Policy: Izinkan siapa saja membaca (untuk Dashboard Recruiter - Idealnya diproteksi Auth, tapi untuk demo kita buka)
 CREATE POLICY "Enable select for anon" ON submissions FOR SELECT USING (true);
 CREATE POLICY "Enable select for anon tokens" ON used_tokens FOR SELECT USING (true);
+CREATE POLICY "Enable select for anon invitations" ON invitations FOR SELECT USING (true);
+
+-- Policy: Izinkan update untuk invitations (mark as used)
+CREATE POLICY "Enable update for anon invitations" ON invitations FOR UPDATE USING (true);
