@@ -9,7 +9,7 @@ import ScoreCard from './components/ScoreCard';
 import DocumentationModal from './components/DocumentationModal';
 import ProctoringCam from './components/ProctoringCam'; // IMPORT NEW COMPONENT
 import { LogicTest, QUESTION_SETS } from './components/LogicTest';
-import { Briefcase, CheckCircle2, ChevronRight, BarChart3, X, Zap, Lock, UserCircle2, ArrowLeft, BookOpen, HelpCircle, CheckCircle, Save, LogOut, Phone, GraduationCap, Building2, Printer, Share2, Settings, Sliders, MonitorPlay, FileText, MessageSquare, ExternalLink, BrainCircuit, ArrowRight, Loader2, Timer, AlertTriangle, Brain, Star, Sparkles, ShieldAlert, Server, UserPlus, Send, Ban, EyeOff, MousePointerClick, Smartphone, Globe, ShieldCheck, Trash2, MessageSquareText, ChevronDown, ChevronUp } from 'lucide-react';
+import { Briefcase, CheckCircle2, ChevronRight, BarChart3, X, Zap, Lock, UserCircle2, ArrowLeft, BookOpen, HelpCircle, CheckCircle, Save, LogOut, Phone, GraduationCap, Building2, Printer, Share2, Settings, Sliders, MonitorPlay, FileText, MessageSquare, ExternalLink, BrainCircuit, ArrowRight, Loader2, Timer, AlertTriangle, Brain, Star, Sparkles, ShieldAlert, Server, UserPlus, Send, Ban, EyeOff, MousePointerClick, Smartphone, Globe, ShieldCheck, Trash2, MessageSquareText, ChevronDown, ChevronUp, Camera, Mic, Users } from 'lucide-react';
 import ReactMarkdown from 'react-markdown'; // Import ReactMarkdown for Dashboard
 import remarkGfm from 'remark-gfm';
 
@@ -60,6 +60,7 @@ function App() {
 
   // Integrity / Anti-Cheat
   const [cheatCount, setCheatCount] = useState(0);
+  const [deviceReady, setDeviceReady] = useState(false); // NEW: Enforce device check
 
   // Documentation Modal
   const [isDocsOpen, setIsDocsOpen] = useState(false);
@@ -252,10 +253,15 @@ function App() {
         return;
     }
     setCurrentView('integrity_briefing');
+    setDeviceReady(false); // Reset device check
   };
 
   // Called from Integrity Briefing -> STARTS LOGIC TEST (STAGE 1)
   const proceedToLogicTestIntro = () => {
+      if (!deviceReady) {
+          alert("Mohon izinkan akses Kamera dan Mikrofon terlebih dahulu.");
+          return;
+      }
       setCurrentView('logic_test_intro');
   }
 
@@ -709,74 +715,83 @@ function App() {
   if (currentView === 'integrity_briefing') {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-sans overflow-y-auto">
+         {/* ACTIVE PROCTORING IN BRIEFING TO CHECK PERMISSIONS */}
+         <ProctoringCam 
+            onViolation={handleProctoringViolation} 
+            isActive={true} 
+            onDeviceStatus={(status) => setDeviceReady(status)}
+         />
+
          <div className="max-w-2xl w-full bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-300 my-4">
              {/* Header */}
              <div className="bg-gradient-to-r from-red-600 to-red-700 p-6 text-white text-center">
                  <ShieldAlert size={48} className="mx-auto mb-3 opacity-90" />
-                 <h2 className="text-2xl font-bold uppercase tracking-wide">Pakta Integritas & Aturan Ujian</h2>
-                 <p className="text-red-100 text-sm mt-1">Wajib dibaca dan dipatuhi sebelum memulai tes.</p>
+                 <h2 className="text-2xl font-bold uppercase tracking-wide">Pakta Integritas & Cek Perangkat</h2>
+                 <p className="text-red-100 text-sm mt-1">Wajib menyalakan Kamera & Mic untuk melanjutkan.</p>
              </div>
 
-             <div className="p-8 space-y-8">
-                 <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg">
-                     <p className="text-red-800 text-sm font-medium leading-relaxed">
-                         <strong>Peringatan Keras:</strong> Sistem Mobeng menggunakan teknologi <i>AI Proctoring</i> canggih. Segala bentuk aktivitas mencurigakan akan dicatat secara otomatis dalam laporan akhir Anda dan dapat menyebabkan diskualifikasi otomatis.
-                     </p>
+             <div className="p-8 space-y-6">
+                 {/* Device Check Section */}
+                 <div className="bg-slate-100 p-4 rounded-xl border border-slate-200">
+                     <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                         <MonitorPlay size={16} /> Status Perangkat
+                     </h3>
+                     <div className="grid grid-cols-2 gap-3">
+                         <div className={`p-3 rounded-lg border flex items-center justify-between ${deviceReady ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+                             <div className="flex items-center gap-2">
+                                 <Camera size={18} />
+                                 <span className="text-xs font-bold">Kamera</span>
+                             </div>
+                             {deviceReady ? <CheckCircle2 size={18}/> : <X size={18}/>}
+                         </div>
+                         <div className={`p-3 rounded-lg border flex items-center justify-between ${deviceReady ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+                             <div className="flex items-center gap-2">
+                                 <Mic size={18} />
+                                 <span className="text-xs font-bold">Mikrofon</span>
+                             </div>
+                             {deviceReady ? <CheckCircle2 size={18}/> : <X size={18}/>}
+                         </div>
+                     </div>
+                     {!deviceReady && (
+                         <div className="mt-3 text-xs text-red-600 bg-red-100 p-2 rounded flex items-center gap-2 animate-pulse">
+                             <AlertTriangle size={14} /> Mohon izinkan akses Kamera dan Mikrofon di browser Anda (Popup di pojok atas).
+                         </div>
+                     )}
                  </div>
 
                  <div className="space-y-4">
                      <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                         <Ban className="text-red-500" size={20} /> Larangan Keras (Do Not)
+                         <Ban className="text-red-500" size={20} /> Larangan Keras
                      </h3>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col gap-2">
                              <Globe className="text-slate-500" size={24} />
                              <h4 className="font-bold text-slate-800 text-sm">Dilarang Pindah Tab</h4>
                              <p className="text-xs text-slate-600">
-                                 Sistem mencatat jika Anda membuka tab baru, browser lain, atau aplikasi lain. Fokus pada layar ujian.
-                             </p>
-                         </div>
-                         <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col gap-2">
-                             <MousePointerClick className="text-slate-500" size={24} />
-                             <h4 className="font-bold text-slate-800 text-sm">No Copy-Paste</h4>
-                             <p className="text-xs text-slate-600">
-                                 Fitur Copy, Cut, dan Paste dinonaktifkan. Dilarang menyalin soal ke ChatGPT atau menyalin jawaban dari luar.
+                                 Sistem mencatat jika Anda membuka tab baru. Fokus pada layar ujian.
                              </p>
                          </div>
                          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col gap-2">
                              <EyeOff className="text-slate-500" size={24} />
                              <h4 className="font-bold text-slate-800 text-sm">Wajah Wajib Terlihat</h4>
                              <p className="text-xs text-slate-600">
-                                 Kamera AI akan memantau posisi wajah. Dilarang menoleh ke kiri/kanan berlebihan atau meninggalkan layar.
-                             </p>
-                         </div>
-                         <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col gap-2">
-                             <Smartphone className="text-slate-500" size={24} />
-                             <h4 className="font-bold text-slate-800 text-sm">Dilarang Bertanya</h4>
-                             <p className="text-xs text-slate-600">
-                                 Dilarang meminta bantuan orang lain di sekitar Anda. Mikrofon juga akan memantau kebisingan.
+                                 Kamera AI akan memantau posisi wajah. Dilarang menoleh berlebihan.
                              </p>
                          </div>
                      </div>
                  </div>
 
-                 <div className="border-t border-slate-200 pt-6">
-                     <h3 className="text-lg font-bold text-slate-800 mb-3">Konsekuensi Pelanggaran</h3>
-                     <ul className="space-y-2 text-sm text-slate-600 list-disc list-inside">
-                         <li>Setiap perpindahan tab dihitung sebagai 1 Poin Kecurangan.</li>
-                         <li>Jika wajah hilang dari kamera > 3 detik, sistem mencatat anomali.</li>
-                         <li>Laporan "Integrity Log" akan dilampirkan bersama hasil skor Anda.</li>
-                         <li>Tim HRD berhak <strong>MENGGUGURKAN</strong> kandidat dengan skor kecurangan tinggi tanpa pemberitahuan.</li>
-                     </ul>
-                 </div>
-
                  <button 
                     onClick={proceedToLogicTestIntro}
-                    className="w-full py-4 bg-red-600 hover:bg-red-700 text-white text-lg font-bold rounded-xl shadow-lg transition-transform active:scale-[0.98] flex items-center justify-center gap-2"
+                    disabled={!deviceReady}
+                    className={`w-full py-4 text-lg font-bold rounded-xl shadow-lg transition-transform active:scale-[0.98] flex items-center justify-center gap-2
+                        ${deviceReady 
+                            ? 'bg-red-600 hover:bg-red-700 text-white cursor-pointer' 
+                            : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`}
                  >
-                     <ShieldCheck size={24} /> Saya Mengerti & Siap Mengerjakan
+                     <ShieldCheck size={24} /> 
+                     {deviceReady ? 'Saya Mengerti & Siap Mengerjakan' : 'Menunggu Izin Perangkat...'}
                  </button>
-                 <p className="text-center text-xs text-slate-400 mt-2">Dengan menekan tombol di atas, Anda menyetujui seluruh aturan ujian Mobeng.</p>
              </div>
          </div>
       </div>
@@ -943,427 +958,444 @@ function App() {
                                         {[
                                             { l: 'Sales', v: selectedSubmission.simulationScores.sales, c: 'bg-blue-100 text-blue-700' },
                                             { l: 'Lead', v: selectedSubmission.simulationScores.leadership, c: 'bg-indigo-100 text-indigo-700' },
-                                            { l: 'Ops', v: selectedSubmission.simulationScores.operations, c: 'bg-red-100 text-red-700' },
+                                            { l: 'Ops', v: selectedSubmission.simulationScores.operations, c: 'bg-orange-100 text-orange-700' },
                                             { l: 'CX', v: selectedSubmission.simulationScores.cx, c: 'bg-green-100 text-green-700' },
-                                        ].map((s) => (
-                                            <div key={s.l} className={`${s.c} p-3 rounded-lg print:border print:border-slate-300`}>
-                                                <div className="text-xs font-bold uppercase opacity-70">{s.l}</div>
+                                        ].map(s => (
+                                            <div key={s.l} className={`${s.c} p-2 rounded-lg border border-white shadow-sm`}>
+                                                <div className="text-[10px] font-bold uppercase opacity-70">{s.l}</div>
                                                 <div className="text-xl font-bold">{s.v}</div>
                                             </div>
                                         ))}
                                 </div>
-                                {selectedSubmission.psychometrics && (
-                                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                                        <h4 className="font-bold text-sm text-slate-600 mb-2 flex items-center gap-2"><Brain size={16}/> Psychometric Profile (Big Five)</h4>
-                                        <div className="w-full">
-                                            <ScoreCard 
-                                                scores={selectedSubmission.simulationScores} 
-                                                psychometrics={selectedSubmission.psychometrics}
-                                                cultureFit={selectedSubmission.cultureFitScore}
-                                                starScore={selectedSubmission.starMethodScore}
-                                                feedback={selectedSubmission.simulationFeedback}
-                                            />
-                                        </div>
-                                    </div>
-                                )}
+                                <ScoreCard scores={selectedSubmission.simulationScores} />
                             </div>
-                            <div className="space-y-4">
-                                <h3 className="font-bold text-mobeng-green flex items-center gap-2 border-b border-slate-200 pb-2">
-                                    <BrainCircuit size={18} /> Hasil Tes 2: Logika
+
+                            <div className="col-span-1 space-y-4">
+                                <h3 className="font-bold text-mobeng-darkblue flex items-center gap-2 border-b border-slate-200 pb-2">
+                                    <BrainCircuit size={18} /> Tes 2: Logic & Integrity
                                 </h3>
-                                <div className="bg-green-50 border border-green-100 p-6 rounded-xl text-center">
-                                    <div className="text-4xl font-bold text-mobeng-green mb-1">{selectedSubmission.logicScore.toFixed(1)}</div>
-                                    <div className="text-xs text-green-800 font-bold uppercase">Skor Logika / 10</div>
-                                </div>
-                                
-                                <div className={`p-4 rounded-xl border ${selectedSubmission.cheatCount > 0 ? 'bg-red-50 border-red-200' : 'bg-slate-50 border-slate-200'}`}>
-                                    <h4 className="font-bold text-sm text-slate-700 mb-2 flex items-center gap-2"><ShieldAlert size={16}/> Integrity Log (Proctoring)</h4>
-                                    <div className="flex items-center justify-between bg-white p-3 rounded-lg border border-slate-100 mb-2">
-                                         <span className="text-xs font-bold text-slate-500">Total Pelanggaran</span>
-                                         <span className={`text-xl font-bold ${selectedSubmission.cheatCount > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                             {selectedSubmission.cheatCount || 0}
-                                         </span>
+                                <div className="space-y-3">
+                                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-center">
+                                        <div className="text-xs text-slate-500 uppercase font-bold mb-1">Skor Logika</div>
+                                        <div className="text-4xl font-bold text-slate-800">{selectedSubmission.logicScore}<span className="text-lg text-slate-400">/10</span></div>
                                     </div>
-                                    <p className="text-[10px] text-slate-500 leading-tight">
-                                        *Mencakup perpindahan tab browser, aplikasi background, dan deteksi wajah (menoleh/tidak ada di depan layar).
-                                    </p>
-                                    {selectedSubmission.cheatCount > 0 && (
-                                        <div className="mt-2 text-xs text-red-600 font-bold flex items-center gap-1 bg-red-100 p-2 rounded">
-                                            <EyeOff size={14} /> Indikasi Kecurangan Terdeteksi
-                                        </div>
-                                    )}
+                                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-center">
+                                         <div className="text-xs text-slate-500 uppercase font-bold mb-1">Culture Fit</div>
+                                         <div className="text-4xl font-bold text-mobeng-blue">{selectedSubmission.cultureFitScore}%</div>
+                                    </div>
+                                    <div className="bg-red-50 p-4 rounded-xl border border-red-100 text-center">
+                                         <div className="text-xs text-red-500 uppercase font-bold mb-1 flex items-center justify-center gap-1"><ShieldAlert size={12}/> Cheat Flags</div>
+                                         <div className="text-2xl font-bold text-red-700">{selectedSubmission.cheatCount} <span className="text-sm font-normal">violations</span></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-
-                         {/* CHAT LOG SECTION */}
-                         <div className="mt-4 border-t border-slate-200 pt-4 print:mt-6 print:border-none">
-                             <button 
+                        
+                        {/* AI Summary Text */}
+                        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                            <h3 className="font-bold text-slate-800 text-lg mb-4 flex items-center gap-2">
+                                <Sparkles className="text-mobeng-yellow" /> Executive Summary (AI)
+                            </h3>
+                            <ReactMarkdown 
+                                remarkPlugins={[remarkGfm]}
+                                className="prose prose-sm max-w-none text-slate-700 leading-relaxed"
+                            >
+                                {selectedSubmission.finalSummary || "Analisa belum tersedia."}
+                            </ReactMarkdown>
+                        </div>
+                        
+                        {/* Chat Transcript Accordion */}
+                        <div className="border border-slate-200 rounded-xl overflow-hidden no-print">
+                            <button 
                                 onClick={() => setShowChatLog(!showChatLog)}
-                                className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl transition-colors text-slate-700 font-bold text-sm no-print"
-                             >
-                                <span className="flex items-center gap-2"><MessageSquareText size={18} className="text-mobeng-blue" /> Transkrip Chat Lengkap</span>
-                                {showChatLog ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                             </button>
-                             
-                             <div className={`${!showChatLog ? 'hidden' : ''} print:block mt-4 bg-slate-100 rounded-xl p-4 max-h-[400px] overflow-y-auto border border-slate-200 space-y-4 print:max-h-none print:overflow-visible print:bg-white print:border-none`}>
-                                 <h4 className="hidden print:block font-bold text-lg mb-4 border-b pb-2">Transkrip Percakapan Lengkap</h4>
-                                    {(selectedSubmission.chatHistory && selectedSubmission.chatHistory.length > 0) ? (
+                                className="w-full bg-slate-50 p-4 flex justify-between items-center text-sm font-bold text-slate-700 hover:bg-slate-100 transition-colors"
+                            >
+                                <span className="flex items-center gap-2"><MessageSquareText size={16}/> Transcript Interview Lengkap</span>
+                                {showChatLog ? <ChevronUp size={16}/> : <ChevronDown size={16}/>}
+                            </button>
+                            
+                            {showChatLog && (
+                                <div className="p-4 bg-slate-50 border-t border-slate-200 max-h-[500px] overflow-y-auto space-y-3">
+                                    {selectedSubmission.chatHistory && selectedSubmission.chatHistory.length > 0 ? (
                                         selectedSubmission.chatHistory.map((msg, idx) => (
-                                            <div key={idx} className={`flex ${msg.sender === Sender.USER ? 'justify-end' : 'justify-start'} print:break-inside-avoid`}>
-                                                <div className={`max-w-[85%] rounded-xl p-3 text-sm leading-relaxed ${
-                                                    msg.sender === Sender.USER 
-                                                    ? 'bg-mobeng-blue text-white rounded-tr-sm print:bg-slate-200 print:text-black print:border-slate-300' 
-                                                    : 'bg-white text-slate-800 border border-slate-200 rounded-tl-sm'
-                                                }`}>
-                                                    <div className="text-[10px] opacity-70 mb-1 font-bold uppercase">{msg.sender === Sender.USER ? 'Kandidat' : 'AI Recruiter'}</div>
-                                                    <div className="whitespace-pre-wrap">{msg.text}</div>
+                                            <div key={idx} className={`flex ${msg.sender === Sender.USER ? 'justify-end' : 'justify-start'}`}>
+                                                <div className={`max-w-[80%] rounded-lg p-3 text-xs ${msg.sender === Sender.USER ? 'bg-mobeng-blue text-white' : 'bg-white border border-slate-200 text-slate-700'}`}>
+                                                    <span className="block font-bold mb-1 opacity-80">{msg.sender === Sender.USER ? 'Kandidat' : 'AI Interviewer'}</span>
+                                                    {msg.text}
                                                 </div>
                                             </div>
                                         ))
                                     ) : (
-                                        <div className="text-center text-slate-400 py-8 italic text-sm">
-                                            Riwayat percakapan tidak tersedia untuk kandidat ini.
-                                        </div>
+                                        <p className="text-center text-slate-400 italic text-xs">Riwayat chat tidak tersedia.</p>
                                     )}
-                             </div>
-                         </div>
-
-                        <div className="mt-4">
-                            <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-3 bg-gradient-to-r from-mobeng-darkblue to-mobeng-blue text-white p-3 rounded-lg">
-                                <Zap size={18} /> KESIMPULAN AKHIR (AI RECOMMENDATION)
-                            </h3>
-                            <div className="bg-white border-2 border-slate-200 p-6 rounded-xl shadow-sm text-slate-800 leading-relaxed text-justify text-base">
-                                <ReactMarkdown 
-                                    remarkPlugins={[remarkGfm]}
-                                    className="prose prose-sm max-w-none prose-slate"
-                                >
-                                    {selectedSubmission.finalSummary || "Data kesimpulan tidak tersedia."}
-                                </ReactMarkdown>
-                            </div>
+                                </div>
+                            )}
                         </div>
+
                     </div>
                 </div>
             </div>
-        )
+        );
     }
-
+    
     // --------------------------------------------------------------------------------
     // VIEW STATE 2: DASHBOARD LIST (TABLE)
     // --------------------------------------------------------------------------------
     return (
-      <div className="min-h-screen bg-slate-50 font-sans relative">
-        <DocumentationModal isOpen={isDocsOpen} onClose={() => setIsDocsOpen(false)} role={'recruiter'} />
-        
-        {/* INVITE CANDIDATE MODAL */}
+      <div className="min-h-screen bg-slate-100 flex font-sans overflow-hidden">
+        {/* Sidebar */}
+        <div className="w-64 bg-mobeng-darkblue text-white flex flex-col shadow-2xl z-20 hidden md:flex">
+             <div className="p-6 border-b border-white/10">
+                 <h1 className="text-xl font-bold tracking-tight">Mobeng <span className="text-mobeng-green">HR</span></h1>
+                 <p className="text-xs text-blue-200 mt-1">Recruitment Control Center</p>
+             </div>
+             
+             <nav className="flex-1 p-4 space-y-2">
+                 <div className="px-4 py-3 bg-white/10 rounded-xl text-sm font-bold flex items-center gap-3 border border-white/5 cursor-pointer">
+                     <Users size={18} className="text-mobeng-green" /> Kandidat
+                 </div>
+                 <button onClick={() => setIsInviteOpen(true)} className="w-full text-left px-4 py-3 hover:bg-white/5 rounded-xl text-sm font-medium flex items-center gap-3 text-blue-100 transition-colors">
+                     <UserPlus size={18} /> Buat Undangan
+                 </button>
+                 <button onClick={() => setIsSettingsOpen(true)} className="w-full text-left px-4 py-3 hover:bg-white/5 rounded-xl text-sm font-medium flex items-center gap-3 text-blue-100 transition-colors">
+                     <Settings size={18} /> Pengaturan Soal
+                 </button>
+                 <button onClick={() => openDocs('recruiter')} className="w-full text-left px-4 py-3 hover:bg-white/5 rounded-xl text-sm font-medium flex items-center gap-3 text-blue-100 transition-colors">
+                     <BookOpen size={18} /> Dokumentasi Sistem
+                 </button>
+             </nav>
+
+             <div className="p-4 border-t border-white/10">
+                 <button onClick={() => setCurrentView('role_selection')} className="flex items-center gap-2 text-xs text-blue-200 hover:text-white transition-colors">
+                     <LogOut size={14} /> Keluar
+                 </button>
+             </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col h-screen overflow-hidden">
+             {/* Mobile Header */}
+             <div className="bg-mobeng-darkblue text-white p-4 md:hidden flex justify-between items-center">
+                 <span className="font-bold">Mobeng HR</span>
+                 <button onClick={() => setIsSettingsOpen(true)}><Settings size={20}/></button>
+             </div>
+
+             <div className="flex-1 overflow-auto p-4 md:p-8">
+                 <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+                     <div>
+                        <h2 className="text-2xl font-bold text-slate-800">Daftar Kandidat</h2>
+                        <p className="text-slate-500 text-sm mt-1">Real-time assessment results dari seluruh cabang.</p>
+                     </div>
+                     <div className="flex gap-2">
+                        <button onClick={() => setIsInviteOpen(true)} className="bg-mobeng-blue hover:bg-mobeng-darkblue text-white px-4 py-2.5 rounded-xl shadow-lg shadow-blue-900/10 text-sm font-bold flex items-center gap-2 transition-all active:scale-95">
+                            <UserPlus size={16} /> Invite Candidate
+                        </button>
+                     </div>
+                 </div>
+
+                 {/* Stats Cards */}
+                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                     <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                         <div>
+                             <div className="text-slate-400 text-xs font-bold uppercase">Total Kandidat</div>
+                             <div className="text-2xl font-bold text-slate-800">{submissions.length}</div>
+                         </div>
+                         <div className="bg-blue-50 p-2 rounded-lg text-blue-600"><Users size={20}/></div>
+                     </div>
+                     <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                         <div>
+                             <div className="text-slate-400 text-xs font-bold uppercase">Lulus (Rec)</div>
+                             <div className="text-2xl font-bold text-green-600">{submissions.filter(s => s.status === 'Recommended').length}</div>
+                         </div>
+                         <div className="bg-green-50 p-2 rounded-lg text-green-600"><CheckCircle size={20}/></div>
+                     </div>
+                     <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                         <div>
+                             <div className="text-slate-400 text-xs font-bold uppercase">Avg Logic Score</div>
+                             <div className="text-2xl font-bold text-purple-600">
+                                 {submissions.length > 0 
+                                    ? (submissions.reduce((acc, curr) => acc + (curr.logicScore || 0), 0) / submissions.length).toFixed(1) 
+                                    : '0.0'}
+                             </div>
+                         </div>
+                         <div className="bg-purple-50 p-2 rounded-lg text-purple-600"><BrainCircuit size={20}/></div>
+                     </div>
+                      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                         <div>
+                             <div className="text-slate-400 text-xs font-bold uppercase">Avg Culture Fit</div>
+                             <div className="text-2xl font-bold text-orange-600">
+                                 {submissions.length > 0 
+                                    ? Math.round(submissions.reduce((acc, curr) => acc + (curr.cultureFitScore || 0), 0) / submissions.length) + '%' 
+                                    : '0%'}
+                             </div>
+                         </div>
+                         <div className="bg-orange-50 p-2 rounded-lg text-orange-600"><Star size={20}/></div>
+                     </div>
+                 </div>
+
+                 {/* Main Table */}
+                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                     <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-slate-50 border-b border-slate-200 text-xs text-slate-500 uppercase tracking-wider">
+                                    <th className="p-4 font-bold">Waktu</th>
+                                    <th className="p-4 font-bold">Nama Kandidat</th>
+                                    <th className="p-4 font-bold">Posisi</th>
+                                    <th className="p-4 font-bold text-center">Logic</th>
+                                    <th className="p-4 font-bold text-center">Culture</th>
+                                    <th className="p-4 font-bold text-center">Status</th>
+                                    <th className="p-4 font-bold text-right">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 text-sm">
+                                {submissions.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={7} className="p-8 text-center text-slate-400">Belum ada data kandidat masuk.</td>
+                                    </tr>
+                                ) : (
+                                    submissions.map((sub) => (
+                                        <tr key={sub.id} className="hover:bg-slate-50/80 transition-colors group">
+                                            <td className="p-4 text-slate-500 font-mono text-xs">
+                                                {sub.timestamp.toLocaleDateString('id-ID', {day: '2-digit', month: 'short'})}
+                                                <br/>
+                                                {sub.timestamp.toLocaleTimeString('id-ID', {hour: '2-digit', minute: '2-digit'})}
+                                            </td>
+                                            <td className="p-4 font-semibold text-slate-800">
+                                                {sub.profile.name}
+                                                <div className="text-xs text-slate-400 font-normal">{sub.profile.phone}</div>
+                                            </td>
+                                            <td className="p-4">
+                                                <span className="px-2 py-1 bg-slate-100 rounded text-xs font-medium text-slate-600">{sub.role}</span>
+                                            </td>
+                                            <td className="p-4 text-center font-mono font-bold text-slate-700">
+                                                {sub.logicScore}
+                                            </td>
+                                             <td className="p-4 text-center font-mono font-bold text-slate-700">
+                                                {sub.cultureFitScore}%
+                                            </td>
+                                            <td className="p-4 text-center">
+                                                <span className={`px-2 py-1 rounded-full text-xs font-bold border ${
+                                                    sub.status === 'Recommended' ? 'bg-green-50 text-green-700 border-green-200' :
+                                                    sub.status === 'Consider' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                                                    'bg-red-50 text-red-700 border-red-200'
+                                                }`}>
+                                                    {sub.status}
+                                                </span>
+                                            </td>
+                                            <td className="p-4 text-right">
+                                                <button 
+                                                    onClick={() => setSelectedSubmission(sub)}
+                                                    className="text-mobeng-blue hover:text-mobeng-darkblue font-bold text-xs bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors border border-blue-200"
+                                                >
+                                                    Detail
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                     </div>
+                 </div>
+             </div>
+        </div>
+
+        {/* SETTINGS MODAL */}
+        {isSettingsOpen && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-in zoom-in-95 duration-200">
+                    <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
+                        <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <Settings size={20} className="text-mobeng-blue"/> Konfigurasi Tes
+                        </h3>
+                        <button onClick={() => setIsSettingsOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={20}/></button>
+                    </div>
+                    
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Paket Soal Logika (Aktif)</label>
+                            <select 
+                                value={appSettings.activeLogicSetId} 
+                                onChange={(e) => setAppSettings(prev => ({...prev, activeLogicSetId: e.target.value}))}
+                                className="w-full border border-slate-300 rounded-xl p-3 text-sm bg-slate-50 focus:ring-2 focus:ring-mobeng-blue outline-none"
+                            >
+                                {Object.values(QUESTION_SETS).map(set => (
+                                    <option key={set.id} value={set.id}>{set.name}</option>
+                                ))}
+                            </select>
+                            <p className="text-xs text-slate-500 mt-2 italic">
+                                {QUESTION_SETS[appSettings.activeLogicSetId]?.description}
+                            </p>
+                        </div>
+                        
+                        <div className="pt-4 border-t border-slate-100">
+                             <label className="flex items-center justify-between cursor-pointer group">
+                                <span className="text-sm font-bold text-slate-700">Tampilkan Skor ke Kandidat?</span>
+                                <div className="relative">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={appSettings.allowCandidateViewScore}
+                                        onChange={(e) => setAppSettings(prev => ({...prev, allowCandidateViewScore: e.target.checked}))}
+                                        className="sr-only peer" 
+                                    />
+                                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-mobeng-green"></div>
+                                </div>
+                            </label>
+                            <p className="text-xs text-slate-400 mt-2">
+                                Jika dimatikan (default), kandidat hanya melihat pesan "Data tersimpan" setelah tes selesai.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="mt-8">
+                        <button onClick={() => setIsSettingsOpen(false)} className="w-full bg-mobeng-darkblue text-white font-bold py-3 rounded-xl hover:bg-black transition-colors">
+                            Simpan Perubahan
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {/* INVITE MODAL */}
         {isInviteOpen && (
-            <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
-                <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsInviteOpen(false)} />
-                <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col">
-                    <div className="bg-mobeng-green p-6 flex justify-between items-center text-white shrink-0">
-                        <h2 className="text-xl font-bold flex items-center gap-2"><UserPlus size={20}/> Undang Kandidat</h2>
-                        <button onClick={() => setIsInviteOpen(false)} className="text-white/70 hover:text-white"><X size={24}/></button>
+            <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200">
+                    <div className="bg-mobeng-blue p-6 text-white text-center relative overflow-hidden">
+                        <div className="absolute top-[-20px] right-[-20px] w-20 h-20 bg-white/10 rounded-full blur-xl"></div>
+                        <UserPlus size={32} className="mx-auto mb-2" />
+                        <h3 className="text-xl font-bold">Buat Undangan Tes</h3>
+                        <p className="text-blue-100 text-xs mt-1">Token aman (enkripsi) khusus untuk satu kandidat.</p>
+                        <button onClick={() => setIsInviteOpen(false)} className="absolute top-4 right-4 text-white/70 hover:text-white"><X size={20}/></button>
                     </div>
                     
                     <form onSubmit={sendInviteWhatsApp} className="p-6 space-y-4">
-                        <p className="text-sm text-slate-600">
-                            Kirim undangan tes otomatis ke WhatsApp pelamar. 
-                        </p>
-                        <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-100 text-xs text-yellow-800 flex gap-2">
-                             <Lock size={14} className="shrink-0 mt-0.5" />
-                             <p><strong>Fitur Keamanan:</strong> Tautan yang dibuat bersifat <strong>Sekali Pakai (One-Time Use)</strong> dan akan mengunci Nama & No HP pelamar agar tidak bisa dipindahtangankan.</p>
-                        </div>
-                        
                         <div>
-                            <label className="block text-xs font-bold text-slate-700 mb-1">Nama Pelamar *</label>
-                            <input name="inviteName" required type="text" className="w-full border border-slate-300 rounded-lg p-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-mobeng-green outline-none bg-slate-50" placeholder="Cth: Andi" />
+                            <label className="block text-xs font-bold text-slate-700 mb-1">Pilih Posisi (Role)</label>
+                            <select 
+                                value={appSettings.activeRole}
+                                onChange={(e) => setAppSettings(prev => ({...prev, activeRole: e.target.value as RoleType}))}
+                                className="w-full border border-slate-300 rounded-lg p-2.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-mobeng-blue outline-none"
+                            >
+                                {Object.values(ROLE_DEFINITIONS).map(role => (
+                                    <option key={role.id} value={role.id}>{role.label}</option>
+                                ))}
+                            </select>
                         </div>
-                        
                         <div>
-                            <label className="block text-xs font-bold text-slate-700 mb-1">Nomor WhatsApp *</label>
-                            <input name="invitePhone" type="text" required className="w-full border border-slate-300 rounded-lg p-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-mobeng-green outline-none bg-slate-50" placeholder="Cth: 08123456789" />
+                            <label className="block text-xs font-bold text-slate-700 mb-1">Nama Kandidat</label>
+                            <input name="inviteName" type="text" placeholder="Nama Lengkap" className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-mobeng-blue outline-none" required />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-slate-700 mb-1">WhatsApp Kandidat</label>
+                            <input name="invitePhone" type="tel" placeholder="0812..." className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-mobeng-blue outline-none" required />
                         </div>
 
-                        <button type="submit" className="w-full bg-mobeng-green hover:bg-mobeng-darkgreen text-white font-bold py-3 rounded-xl transition-colors shadow-md flex items-center justify-center gap-2">
-                            <Send size={18} /> Kirim Undangan WA
+                        <div className="bg-blue-50 p-3 rounded-lg flex items-start gap-2 border border-blue-100">
+                            <Lock size={14} className="text-mobeng-blue mt-0.5 shrink-0" />
+                            <p className="text-[10px] text-blue-800 leading-tight">
+                                Link undangan akan otomatis mengunci nama & posisi. Link hanya valid selama 24 jam dan 1x pakai.
+                            </p>
+                        </div>
+
+                        <button type="submit" className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-lg shadow-green-900/10">
+                            <Send size={16} /> Kirim Undangan via WA
                         </button>
                     </form>
                 </div>
             </div>
         )}
 
-        {/* Settings Modal */}
-        {isSettingsOpen && (
-            <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
-                <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsSettingsOpen(false)} />
-                <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
-                    <div className="bg-mobeng-darkblue p-6 flex justify-between items-center text-white shrink-0">
-                        <h2 className="text-xl font-bold flex items-center gap-2"><Settings size={20}/> Pengaturan Sistem</h2>
-                        <button onClick={() => setIsSettingsOpen(false)} className="text-white/70 hover:text-white"><X size={24}/></button>
-                    </div>
-                    <div className="p-6 space-y-6 overflow-y-auto">
-                        <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
-                                <Briefcase size={16} className="text-mobeng-blue"/> Posisi yang Diuji (Active Role)
-                            </label>
-                            <p className="text-xs text-slate-600 mb-3">Memilih posisi akan mengubah skenario soal dan kriteria penilaian AI.</p>
-                            <select 
-                                value={appSettings.activeRole}
-                                onChange={(e) => setAppSettings(prev => ({...prev, activeRole: e.target.value as RoleType}))}
-                                className="w-full border border-slate-300 rounded-lg p-3 text-sm font-medium text-slate-800 focus:ring-2 focus:ring-mobeng-blue outline-none bg-slate-50"
-                            >
-                                {Object.values(ROLE_DEFINITIONS).map(role => (
-                                    <option key={role.id} value={role.id}>{role.label}</option>
-                                ))}
-                            </select>
-                            <div className="mt-2 bg-blue-50 p-3 rounded-lg border border-blue-100 text-xs text-blue-800">
-                                <strong>Info Skenario:</strong> {ROLE_DEFINITIONS[appSettings.activeRole].description}
-                            </div>
-                        </div>
-                        <div className="pt-4 border-t border-slate-100">
-                             <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
-                                <BrainCircuit size={16} className="text-mobeng-blue"/> Versi Soal Logika (Anti-Cheat)
-                            </label>
-                            <p className="text-xs text-slate-600 mb-3">Pilih paket soal yang aktif. Ubah paket secara berkala untuk mencegah kebocoran soal antar kandidat.</p>
-                            <select 
-                                value={appSettings.activeLogicSetId}
-                                onChange={(e) => setAppSettings(prev => ({...prev, activeLogicSetId: e.target.value}))}
-                                className="w-full border border-slate-300 rounded-lg p-3 text-sm font-medium text-slate-800 focus:ring-2 focus:ring-mobeng-blue outline-none bg-slate-50"
-                            >
-                                {Object.values(QUESTION_SETS).map(set => (
-                                    <option key={set.id} value={set.id}>{set.name}</option>
-                                ))}
-                            </select>
-                            <div className="mt-2 bg-green-50 p-3 rounded-lg border border-green-100 text-xs text-green-800">
-                                <strong>Paket Aktif:</strong> {QUESTION_SETS[appSettings.activeLogicSetId]?.description || "Paket tidak ditemukan"}
-                            </div>
-                        </div>
-                        <div className="pt-4 border-t border-slate-100">
-                            <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
-                                <MonitorPlay size={16} className="text-mobeng-blue"/> Mode Tampilan Kandidat
-                            </label>
-                            <p className="text-xs text-slate-600 mb-3">Pilih apakah kandidat dapat melihat skor penilaian AI secara real-time saat simulasi.</p>
-                            <div className="flex items-center gap-4 mt-3">
-                                <button 
-                                    onClick={() => setAppSettings(prev => ({...prev, allowCandidateViewScore: false}))}
-                                    className={`flex-1 p-3 rounded-xl border shadow-sm flex flex-col items-center gap-2 transition-all ${
-                                        !appSettings.allowCandidateViewScore 
-                                        ? 'bg-mobeng-darkblue border-mobeng-darkblue text-white ring-2 ring-mobeng-darkblue ring-offset-2' 
-                                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                                    }`}
-                                >
-                                    <Zap size={20} className={!appSettings.allowCandidateViewScore ? 'text-yellow-400' : 'text-slate-400'} />
-                                    <span className="text-sm font-semibold">Mode Konsentrasi</span>
-                                    <span className="text-[10px] opacity-80 font-normal">Blind Test (Nilai hidden)</span>
-                                </button>
-                                <button 
-                                    onClick={() => setAppSettings(prev => ({...prev, allowCandidateViewScore: true}))}
-                                    className={`flex-1 p-3 rounded-xl border shadow-sm flex flex-col items-center gap-2 transition-all ${
-                                        appSettings.allowCandidateViewScore 
-                                        ? 'bg-white border-mobeng-green text-mobeng-green ring-2 ring-mobeng-green ring-offset-2' 
-                                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                                    }`}
-                                >
-                                    <BarChart3 size={20} />
-                                    <span className="text-sm font-semibold">Transparan</span>
-                                    <span className="text-[10px] opacity-80 font-normal">Tampilkan Grafik Live</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="p-4 bg-slate-50 text-right shrink-0 border-t border-slate-200">
-                         <button onClick={() => setIsSettingsOpen(false)} className="bg-mobeng-blue text-white px-6 py-2 rounded-lg text-sm font-semibold hover:bg-mobeng-darkblue transition-colors">Simpan Pengaturan</button>
-                    </div>
-                </div>
-            </div>
-        )}
-        
-        <header className="bg-mobeng-darkblue text-white p-3 md:p-4 flex justify-between items-center shadow-lg sticky top-0 z-50 no-print">
-           <div className="flex items-center gap-2 md:gap-3 overflow-hidden">
-              <div className="bg-mobeng-blue p-2 rounded-lg shadow-md shrink-0"><Briefcase size={20} /></div>
-              <div className="flex flex-col md:flex-row md:items-center gap-0.5 md:gap-3 overflow-hidden">
-                  <h1 className="font-bold text-base md:text-lg leading-tight truncate">HR Dashboard</h1>
-                  <div className="px-2 py-0.5 md:px-3 md:py-1 bg-white/10 rounded-full text-[10px] md:text-xs font-mono border border-white/20 flex items-center gap-1.5 w-fit">
-                      <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-mobeng-green shrink-0 animate-pulse"></span>
-                      <span className="truncate max-w-[100px] md:max-w-none">{activeRoleDefinition.label}</span>
-                  </div>
-              </div>
-           </div>
-
-           <div className="flex items-center gap-2 md:gap-3 shrink-0 ml-2">
-               <button onClick={() => setIsInviteOpen(true)} className="p-2 md:px-3 md:py-1.5 bg-mobeng-green rounded-lg hover:bg-mobeng-darkgreen flex items-center gap-2 transition-colors shadow-sm" title="Undang Kandidat">
-                 <UserPlus size={18} className="md:w-4 md:h-4" />
-                 <span className="hidden md:inline text-sm">Invite</span>
-               </button>
-               <button onClick={() => openDocs('recruiter')} className="p-2 md:px-3 md:py-1.5 bg-white/10 rounded-lg hover:bg-white/20 flex items-center gap-2 border border-white/20 transition-colors" title="Dokumentasi">
-                 <Server size={18} className="md:w-4 md:h-4" /> 
-                 <span className="hidden md:inline text-sm">Docs</span>
-               </button>
-               <button onClick={() => setIsSettingsOpen(true)} className="p-2 md:px-3 md:py-1.5 bg-mobeng-blue rounded-lg hover:bg-sky-600 flex items-center gap-2 transition-colors shadow-sm" title="Pengaturan">
-                 <Sliders size={18} className="md:w-4 md:h-4" />
-                 <span className="hidden md:inline text-sm">Settings</span>
-               </button>
-               <button onClick={() => setCurrentView('role_selection')} className="p-2 md:px-3 md:py-1.5 bg-red-500/20 md:bg-white/10 rounded-lg hover:bg-red-500/30 md:hover:bg-white/20 flex items-center gap-2 border border-transparent md:border-white/10 text-red-200 md:text-white" title="Keluar">
-                 <LogOut size={18} className="md:w-4 md:h-4" />
-                 <span className="hidden md:inline text-sm">Exit</span>
-               </button>
-           </div>
-        </header>
-        
-        <div className="p-4 md:p-8 max-w-7xl mx-auto no-print">
-             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                <div>
-                    <h2 className="text-2xl font-bold text-mobeng-darkblue">Overview Kandidat</h2>
-                    <p className="text-slate-600 text-sm">Data pelamar terbaru dari Database Cloud.</p>
-                </div>
-            </div>
-            
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                {submissions.length === 0 ? (
-                    <div className="p-12 text-center text-slate-400">
-                        <UserCircle2 size={48} className="mx-auto mb-3 opacity-20" />
-                        <p>Belum ada data pelamar.</p>
-                    </div>
-                ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm text-slate-700">
-                            <thead className="bg-slate-50 text-slate-800 uppercase tracking-wider text-xs">
-                                <tr>
-                                    <th className="px-6 py-4 font-semibold">Kandidat</th>
-                                    <th className="px-6 py-4 font-semibold">Posisi</th>
-                                    <th className="px-6 py-4 font-semibold text-center">Fit Score</th>
-                                    <th className="px-6 py-4 font-semibold text-center">Logika</th>
-                                    <th className="px-6 py-4 font-semibold text-center">Status</th>
-                                    <th className="px-6 py-4 font-semibold text-right">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {submissions.map((sub) => {
-                                    const avgSim = Math.round((sub.simulationScores.sales + sub.simulationScores.leadership + sub.simulationScores.operations + sub.simulationScores.cx) / 4);
-                                    return (
-                                        <tr key={sub.id} className="hover:bg-slate-50/50 transition-colors">
-                                            <td className="px-6 py-4 font-bold text-slate-900">{sub.profile.name}</td>
-                                            <td className="px-6 py-4"><span className="bg-slate-100 text-slate-700 px-2 py-1 rounded text-xs border border-slate-200 font-medium">{sub.role}</span></td>
-                                            <td className="px-6 py-4 text-center font-bold text-mobeng-blue">{sub.cultureFitScore || avgSim*10}%</td>
-                                            <td className="px-6 py-4 text-center font-bold text-slate-700">{sub.logicScore.toFixed(1)}/10</td>
-                                            <td className="px-6 py-4 text-center">
-                                                 <span className={`inline-block px-2 py-1 rounded-full text-xs font-bold
-                                                    ${sub.status === 'Recommended' ? 'bg-green-100 text-green-800' : 
-                                                      sub.status === 'Consider' ? 'bg-orange-100 text-orange-800' : 'bg-red-100 text-red-800'}`}>
-                                                    {sub.status}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-right flex items-center justify-end gap-2">
-                                                <button onClick={() => setSelectedSubmission(sub)} className="text-mobeng-blue hover:text-mobeng-darkblue text-xs font-bold">Detail</button>
-                                                <button 
-                                                    onClick={() => handleDeleteSubmission(sub.id, sub.profile.name)}
-                                                    className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition-colors"
-                                                    title="Hapus Data"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-            </div>
-        </div>
       </div>
     );
   }
 
-  // 7. SIMULATION VIEW (TEST 2)
+  // 7. SIMULATION VIEW (CHAT)
   if (currentView === 'simulation') {
-      if (isSubmitting) {
-          return (
-              <div className="min-h-screen bg-mobeng-lightgrey flex flex-col items-center justify-center p-4">
-                  <div className="bg-white p-8 rounded-2xl shadow-xl text-center max-w-sm w-full">
-                      <Loader2 size={48} className="animate-spin text-mobeng-blue mx-auto mb-4" />
-                      <h3 className="text-xl font-bold text-slate-800 mb-2">Menyimpan Hasil Tes</h3>
-                      <p className="text-slate-600 text-sm">{submissionProgress}</p>
-                  </div>
-              </div>
-          )
-      }
-      return (
+    return (
         // ADDED select-none class here
-        <div className="h-screen flex flex-col bg-slate-100 overflow-hidden font-sans relative select-none">
-          <DocumentationModal isOpen={isDocsOpen} onClose={() => setIsDocsOpen(false)} role={'candidate'} />
-          
-          {/* ADDED PROCTORING CAM HERE */}
-          <ProctoringCam onViolation={handleProctoringViolation} isActive={true} />
+      <div className="h-screen bg-mobeng-lightgrey flex flex-col items-center justify-center p-2 md:p-6 select-none relative">
+         <ProctoringCam onViolation={handleProctoringViolation} isActive={true} />
 
-          {showSimFinishModal && (
-              <div className="absolute inset-0 z-[100] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300">
-                 <div className="bg-white rounded-2xl max-w-lg w-full p-8 text-center shadow-2xl transform transition-all scale-100">
-                     <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6"><CheckCircle2 size={40} className="text-mobeng-green" /></div>
-                     <h2 className="text-2xl font-bold text-mobeng-darkblue mb-2">Seluruh Rangkaian Tes Selesai!</h2>
-                     <p className="text-slate-600 mb-8 font-medium">Terima kasih, <strong>{candidateProfile.name}</strong>. Anda telah menyelesaikan Tahap Logika & Simulasi.</p>
-                     <div className="flex flex-col gap-3">
-                         <p className="text-xs text-slate-500 mb-2">Klik tombol di bawah untuk menyimpan hasil tes Anda ke database.</p>
-                         <button onClick={handleFinalSubmission} className="w-full py-3 px-4 bg-mobeng-blue text-white font-bold rounded-xl hover:bg-mobeng-darkblue transition-colors flex items-center justify-center gap-2 shadow-lg">
-                             Simpan & Selesai <Save size={18} />
-                         </button>
-                     </div>
-                 </div>
-              </div>
-          )}
-
-          <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 z-20 shadow-sm flex-shrink-0">
-             <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-mobeng-blue flex items-center justify-center text-white"><Briefcase size={18} strokeWidth={2.5} /></div>
-                <div className="hidden md:block">
-                    <h1 className="font-bold text-mobeng-darkblue text-lg">Mobeng <span className="font-normal text-slate-500">Recruitment</span></h1>
-                    <div className="text-xs text-slate-500 flex items-center gap-1 font-medium"><UserCircle2 size={10}/> Kandidat: {candidateProfile.name}</div>
-                </div>
-             </div>
-             <div className="flex items-center gap-2 md:gap-4">
-                 <button onClick={() => openDocs('candidate')} className="flex items-center gap-2 text-sm text-slate-600 bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg hover:bg-slate-100 transition-all font-medium"><HelpCircle size={18} className="text-mobeng-orange" /><span className="hidden md:inline">Panduan</span></button>
-                 <button onClick={() => setShowSimFinishModal(true)} className="hidden md:flex text-sm bg-mobeng-darkblue text-white px-4 py-2 rounded-lg hover:bg-mobeng-blue transition-colors items-center gap-2 shadow-md font-medium"><CheckCircle size={16} /> Selesai</button>
-             </div>
-          </header>
-
-          <div className="flex-1 flex overflow-hidden relative">
-            <main className="flex-1 flex flex-col h-full relative p-2 md:p-6 max-w-5xl mx-auto w-full">
-              <ChatInterface messages={messages} onSendMessage={handleSendMessage} isThinking={isThinking} />
-            </main>
-
-            <aside className="hidden md:block w-80 lg:w-96 bg-white border-l border-slate-200 p-6 flex-shrink-0 overflow-y-auto transition-all">
-                 <div className="sticky top-0">
-                    {appSettings.allowCandidateViewScore ? (
-                        <div className="animate-in fade-in slide-in-from-right-4 duration-500">
-                             <div className="flex items-center gap-2 mb-4 bg-blue-50 text-blue-800 px-3 py-2 rounded-lg text-xs font-bold border border-blue-100">
-                                 <BarChart3 size={14}/> Mode Transparan Aktif
-                             </div>
-                             <ScoreCard 
-                                scores={currentAnalysis?.scores || {sales:0, leadership:0, operations:0, cx:0}} 
-                                feedback={currentAnalysis?.feedback} 
-                             />
+         {/* Overlay Modal for Finish */}
+         {showSimFinishModal && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+                <div className="bg-white rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl animate-in zoom-in-95 duration-300">
+                    {isSubmitting ? (
+                        <div className="py-8">
+                            <div className="w-16 h-16 border-4 border-mobeng-blue border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                            <h3 className="text-lg font-bold text-slate-800 animate-pulse">Memproses Data...</h3>
+                            <p className="text-slate-500 text-sm mt-2 max-w-[200px] mx-auto">{submissionProgress}</p>
                         </div>
                     ) : (
-                        <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 text-center animate-in fade-in duration-500">
-                            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-4 mx-auto text-mobeng-blue"><Zap size={32} /></div>
-                            <h3 className="text-lg font-bold text-mobeng-darkblue mb-2">Mode Konsentrasi</h3>
-                            <p className="text-sm text-slate-600 leading-relaxed mb-6">Penilaian berjalan di latar belakang (Blind Test). Fokuslah menjawab setiap skenario dengan natural.</p>
-                            <div className="text-left text-xs text-slate-500 bg-white p-3 rounded-lg border border-slate-100">
-                                <p className="mb-2 font-bold text-slate-700">Aktif: {activeRoleDefinition.label}</p>
-                                <p className="italic text-slate-600">{activeRoleDefinition.description}</p>
+                        <>
+                            <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <CheckCircle size={40} />
                             </div>
+                            <h2 className="text-2xl font-bold text-slate-900 mb-2">Sesi Interview Selesai!</h2>
+                            <p className="text-slate-600 text-sm mb-6">Terima kasih telah menyelesaikan seluruh rangkaian tes.</p>
+                            <button 
+                                onClick={handleFinalSubmission}
+                                className="w-full bg-mobeng-darkblue text-white font-bold py-3 rounded-xl hover:bg-black transition-colors shadow-lg flex items-center justify-center gap-2"
+                            >
+                                <Save size={18} /> Simpan & Akhiri Tes
+                            </button>
+                        </>
+                    )}
+                </div>
+            </div>
+         )}
+
+         <div className="w-full max-w-6xl h-full flex flex-col md:flex-row gap-4 md:gap-6">
+            
+            {/* Left Panel: Real-time Score (Hidden on Mobile if blind mode is on, but let's keep it visible for demo or controlled by settings) */}
+            <div className="hidden md:flex md:w-1/3 flex-col gap-4 h-full">
+                <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex-1 overflow-y-auto">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="p-2 bg-mobeng-blue/10 rounded-lg text-mobeng-blue"><BarChart3 size={20} /></div>
+                        <div>
+                            <h2 className="font-bold text-slate-800">Live Assessment</h2>
+                            <p className="text-xs text-slate-500">AI menganalisa setiap jawaban Anda</p>
+                        </div>
+                    </div>
+                    
+                    {appSettings.allowCandidateViewScore ? (
+                        <ScoreCard 
+                            scores={currentAnalysis?.scores || {sales:0, leadership:0, operations:0, cx:0}} 
+                            feedback={currentAnalysis?.feedback}
+                        />
+                    ) : (
+                        <div className="flex flex-col items-center justify-center h-[300px] text-center p-4 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50">
+                            <Lock size={40} className="text-slate-300 mb-3" />
+                            <h3 className="font-bold text-slate-400">Mode Blind Assessment</h3>
+                            <p className="text-xs text-slate-400 mt-1">Skor dan analisis disembunyikan agar Anda tetap fokus menjawab secara natural tanpa tekanan angka.</p>
                         </div>
                     )}
-                 </div>
-            </aside>
-          </div>
-        </div>
-      );
+                </div>
+            </div>
+
+            {/* Right Panel: Chat Interface */}
+            <div className="w-full md:w-2/3 h-full flex flex-col shadow-xl rounded-2xl overflow-hidden bg-white border border-slate-200 relative">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-mobeng-blue via-mobeng-green to-mobeng-blue animate-gradient-x z-20"></div>
+                
+                {/* Mobile Header for Score Toggle (Optional) */}
+                <div className="md:hidden p-3 bg-white border-b border-slate-100 flex justify-between items-center">
+                    <span className="font-bold text-sm text-slate-700 flex items-center gap-2"><Briefcase size={14}/> {activeRoleDefinition.label}</span>
+                    <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-1 rounded-full font-bold">Simulasi AI</span>
+                </div>
+
+                <ChatInterface 
+                    messages={messages} 
+                    onSendMessage={handleSendMessage} 
+                    isThinking={isThinking}
+                />
+            </div>
+         </div>
+      </div>
+    );
   }
 
-  // Fallback return if something goes wrong with view state
-  return null;
+  return <div>Loading...</div>;
 }
 
 export default App;
