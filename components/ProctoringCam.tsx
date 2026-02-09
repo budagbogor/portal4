@@ -1,13 +1,9 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Webcam from 'react-webcam';
-import * as FaceMeshPkg from '@mediapipe/face_mesh';
-import * as CameraUtilsPkg from '@mediapipe/camera_utils';
+import { FaceMesh } from '@mediapipe/face_mesh';
+import { Camera } from '@mediapipe/camera_utils';
 import { AlertTriangle, Eye, EyeOff, ShieldCheck, CameraOff, Mic, MicOff, CheckCircle2 } from 'lucide-react';
-
-// Robust import handling for MediaPipe packages
-const FaceMesh = (FaceMeshPkg as any).FaceMesh || (FaceMeshPkg as any).default?.FaceMesh || FaceMeshPkg;
-const Camera = (CameraUtilsPkg as any).Camera || (CameraUtilsPkg as any).default?.Camera || CameraUtilsPkg;
 
 interface ProctoringCamProps {
   onViolation: (type: 'LOOKING_AWAY' | 'NO_FACE') => void;

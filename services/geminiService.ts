@@ -6,10 +6,11 @@ import { Message, Sender, AnalysisResult, AssessmentScores, CandidateProfile, Bi
 // Priorities: 1. LocalStorage (Admin Setting), 2. Environment Variable
 const getGenAI = () => {
   const localKey = localStorage.getItem('gemini_api_key');
-  const finalKey = localKey || process.env.API_KEY;
+  // VITE CHANGE: Use import.meta.env instead of process.env, with safety check
+  const finalKey = localKey || (import.meta.env && import.meta.env.VITE_GEMINI_API_KEY) || '';
   
   if (!finalKey) {
-    console.warn("API Key is missing. Please configure it in settings.");
+    console.warn("API Key is missing. Please configure it in settings or VITE_GEMINI_API_KEY env var.");
   }
   
   return new GoogleGenAI({ apiKey: finalKey });
