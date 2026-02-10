@@ -1355,7 +1355,7 @@ function App() {
                 </Suspense>
 
                 <div className="min-h-[100dvh] bg-slate-50 flex items-center justify-center p-4 font-sans overflow-y-auto">
-                    <div className="max-w-xl w-full bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-300 my-4 text-center">
+                    <div className="max-w-xl w-full bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200 my-4 text-center">
                         <div className="bg-slate-900 p-8">
                             <div className="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
                                 <Camera size={40} className="text-mobeng-green" />
