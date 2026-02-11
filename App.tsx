@@ -285,11 +285,6 @@ function App() {
             // Allow full access for recruiters
             if (currentView === 'recruiter_dashboard' || currentView === 'recruiter_login' || currentView === 'role_selection') return;
 
-            // Disable Right Click
-            if (e.type === 'contextmenu') {
-                e.preventDefault();
-            }
-
             // Disable Copy and Cut (Allow Paste for input, although ChatInterface handles paste separately)
             if (e.type === 'copy' || e.type === 'cut') {
                 e.preventDefault();
@@ -297,12 +292,12 @@ function App() {
             }
         };
 
-        document.addEventListener('contextmenu', handleSecurityEvents);
+        // document.addEventListener('contextmenu', handleSecurityEvents); // ALLOW RIGHT CLICK FOR DEBUG
         document.addEventListener('copy', handleSecurityEvents);
         document.addEventListener('cut', handleSecurityEvents);
 
         return () => {
-            document.removeEventListener('contextmenu', handleSecurityEvents);
+            // document.removeEventListener('contextmenu', handleSecurityEvents);
             document.removeEventListener('copy', handleSecurityEvents);
             document.removeEventListener('cut', handleSecurityEvents);
         };
