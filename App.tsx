@@ -350,7 +350,7 @@ function App() {
         // Increment cheat count strictly on violation
         setCheatCount(prev => prev + 1);
 
-        const warningAudio = new Audio('https://www.soundjay.com/buttons/sounds/beep-02.mp3');
+        const warningAudio = new Audio('/sounds/beep.mp3');
         warningAudio.play().catch(e => console.log('Audio play failed', e));
 
         // Console log for debug, but main logic is updating the cheatCount state
@@ -1127,7 +1127,13 @@ function App() {
                                 </div>
                                 <div className="print:scale-[0.85] print:origin-top-left">
                                     <Suspense fallback={<LoadingScreen />}>
-                                        <ScoreCard scores={selectedSubmission.simulationScores} />
+                                        <ScoreCard
+                                            scores={selectedSubmission.simulationScores}
+                                            psychometrics={selectedSubmission.psychometrics}
+                                            cultureFit={selectedSubmission.cultureFitScore}
+                                            starScore={selectedSubmission.starMethodScore}
+                                            feedback={selectedSubmission.simulationFeedback}
+                                        />
                                     </Suspense>
                                 </div>
                             </div>
@@ -1812,7 +1818,12 @@ function App() {
                             <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-1 rounded-full font-bold">Simulasi AI</span>
                         </div>
                         <Suspense fallback={<LoadingScreen />}>
-                            <ChatInterface messages={messages} onSendMessage={handleSendMessage} isThinking={isThinking} />
+                            <ChatInterface
+                                messages={messages}
+                                onSendMessage={handleSendMessage}
+                                isThinking={isThinking}
+                                onFinish={() => setShowSimFinishModal(true)}
+                            />
                         </Suspense>
                     </div>
                 </div>

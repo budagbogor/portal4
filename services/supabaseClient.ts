@@ -2,11 +2,9 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Project Reference derived from your JWT Token
-const PROJECT_REF = 'ogaxelnnaxojzrbrewaf';
-const SUPABASE_URL = `https://${PROJECT_REF}.supabase.co`;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 // The Anon Key provided. 
-// VITE CHANGE: Use import.meta.env safely
-const SUPABASE_ANON_KEY = (import.meta.env && import.meta.env.VITE_SUPABASE_ANON_KEY) || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9nYXhlbG5uYXhvanpyYnJld2FmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAyNzYxNjksImV4cCI6MjA4NTg1MjE2OX0.d9KU-OK86TO7isTTgBZ09n4u8mb4rPghK2gq6RZiosQ';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
