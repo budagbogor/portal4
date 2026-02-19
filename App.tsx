@@ -60,7 +60,6 @@ function App() {
     const [authLoading, setAuthLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false); // NEW: Toggle Password Visibility
     const [isRegisterMode, setIsRegisterMode] = useState(false);
-    const [isForgotPasswordMode, setIsForgotPasswordMode] = useState(false); // NEW: Forgot Password State
 
     // --- USER MANAGEMENT STATE ---
     const [users, setUsers] = useState<Profile[]>([]);
@@ -602,27 +601,7 @@ function App() {
         }
     };
 
-    const handleForgotPassword = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!loginEmail) {
-            alert("Mohon isi email terlebih dahulu.");
-            return;
-        }
-        setAuthLoading(true);
-        try {
-            const { error } = await supabase.auth.resetPasswordForEmail(loginEmail, {
-                redirectTo: window.location.origin + window.location.pathname + '?reset=true',
-            });
-            if (error) throw error;
-            alert("Link reset password telah dikirim ke email Anda. Silakan cek inbox/spam.");
-            setIsForgotPasswordMode(false);
-        } catch (error: any) {
-            console.error("Reset Password Error:", error);
-            alert(`Gagal mengirim link: ${error.message}`);
-        } finally {
-            setAuthLoading(false);
-        }
-    };
+
 
     const handleRecruiterLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -887,119 +866,69 @@ function App() {
                         <div className="w-16 h-16 bg-mobeng-blue rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-500/30">
                             <Lock className="text-white w-8 h-8" />
                         </div>
-                        <h2 className="text-2xl font-bold text-white mb-2">
-                            {isForgotPasswordMode ? 'Reset Password' : (isRegisterMode ? 'Buat Akun Admin' : 'Login Admin')}
-                        </h2>
-                        <p className="text-blue-200 text-sm">
-                            {isForgotPasswordMode ? 'Masukkan email untuk menerima link reset.' : 'Akses khusus tim rekrutmen Mobeng.'}
-                        </p>
+                        <h2 className="text-2xl font-bold text-white mb-2">{isRegisterMode ? 'Buat Akun Admin' : 'Login Admin'}</h2>
+                        <p className="text-blue-200 text-sm">Akses khusus tim rekrutmen Mobeng.</p>
                     </div>
 
-                    {isForgotPasswordMode ? (
-                        /* FORGOT PASSWORD FORM */
-                        <form onSubmit={handleForgotPassword} className="space-y-4">
+                    <form onSubmit={handleRecruiterLogin} className="space-y-4">
+                        {isRegisterMode && (
                             <div>
-                                <label className="block text-xs font-bold text-blue-300 uppercase mb-2">Email</label>
+                                <label className="block text-xs font-bold text-blue-300 uppercase mb-2">Nama Lengkap</label>
                                 <input
-                                    type="email"
+                                    type="text"
                                     required
-                                    value={loginEmail}
-                                    onChange={(e) => setLoginEmail(e.target.value)}
+                                    value={loginName}
+                                    onChange={(e) => setLoginName(e.target.value)}
                                     className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-mobeng-blue transition-all"
-                                    placeholder="nama@mobeng.co.id"
+                                    placeholder="Nama Lengkap Admin"
                                 />
                             </div>
-                            <button
-                                type="submit"
-                                disabled={authLoading}
-                                className="w-full bg-mobeng-blue hover:bg-blue-600 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-500/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed mt-4"
-                            >
-                                {authLoading ? <Loader2 className="animate-spin mx-auto" /> : 'Kirim Link Reset'}
-                            </button>
+                        )}
+                        <div>
+                            <label className="block text-xs font-bold text-blue-300 uppercase mb-2">Email</label>
+                            <input
+                                type="email"
+                                required
+                                value={loginEmail}
+                                onChange={(e) => setLoginEmail(e.target.value)}
+                                className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-mobeng-blue transition-all"
+                                placeholder="nama@mobeng.co.id"
+                            />
+                        </div>
+                        <div className="relative">
+                            <label className="block text-xs font-bold text-blue-300 uppercase mb-2">Password</label>
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                required
+                                value={loginPassword}
+                                onChange={(e) => setLoginPassword(e.target.value)}
+                                className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-mobeng-blue transition-all pr-12"
+                                placeholder="••••••••"
+                            />
                             <button
                                 type="button"
-                                onClick={() => setIsForgotPasswordMode(false)}
-                                className="w-full text-white/60 hover:text-white text-sm font-medium py-2 transition-colors"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-4 top-[38px] text-white/50 hover:text-white transition-colors"
                             >
-                                Batal, kembali ke login
+                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                             </button>
-                        </form>
-                    ) : (
-                        /* LOGIN / REGISTER FORM */
-                        <form onSubmit={handleRecruiterLogin} className="space-y-4">
-                            {isRegisterMode && (
-                                <div>
-                                    <label className="block text-xs font-bold text-blue-300 uppercase mb-2">Nama Lengkap</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={loginName}
-                                        onChange={(e) => setLoginName(e.target.value)}
-                                        className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-mobeng-blue transition-all"
-                                        placeholder="Nama Lengkap Admin"
-                                    />
-                                </div>
-                            )}
-                            <div>
-                                <label className="block text-xs font-bold text-blue-300 uppercase mb-2">Email</label>
-                                <input
-                                    type="email"
-                                    required
-                                    value={loginEmail}
-                                    onChange={(e) => setLoginEmail(e.target.value)}
-                                    className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-mobeng-blue transition-all"
-                                    placeholder="nama@mobeng.co.id"
-                                />
-                            </div>
-                            <div className="relative">
-                                <label className="block text-xs font-bold text-blue-300 uppercase mb-2">Password</label>
-                                <input
-                                    type={showPassword ? "text" : "password"}
-                                    required
-                                    value={loginPassword}
-                                    onChange={(e) => setLoginPassword(e.target.value)}
-                                    className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-mobeng-blue transition-all pr-12"
-                                    placeholder="••••••••"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-4 top-[38px] text-white/50 hover:text-white transition-colors"
-                                >
-                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                                </button>
-                            </div>
+                        </div>
 
-                            {!isRegisterMode && (
-                                <div className="text-right">
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsForgotPasswordMode(true)}
-                                        className="text-xs text-blue-300 hover:text-white transition-colors font-bold"
-                                    >
-                                        Lupa Password?
-                                    </button>
-                                </div>
-                            )}
-
-                            <button
-                                type="submit"
-                                disabled={authLoading}
-                                className="w-full bg-mobeng-blue hover:bg-blue-600 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-500/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed mt-4"
-                            >
-                                {authLoading ? <Loader2 className="animate-spin mx-auto" /> : (isRegisterMode ? 'Daftar' : 'Masuk Dashboard')}
-                            </button>
-                        </form>
-                    )}
+                        <button
+                            type="submit"
+                            disabled={authLoading}
+                            className="w-full bg-mobeng-blue hover:bg-blue-600 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-500/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed mt-4"
+                        >
+                            {authLoading ? <Loader2 className="animate-spin mx-auto" /> : (isRegisterMode ? 'Daftar' : 'Masuk Dashboard')}
+                        </button>
+                    </form>
 
                     <div className="mt-6 text-center text-sm">
                         {/* HIDE PUBLIC REGISTER BUTTON - ONLY VIA LINK */}
-                        {!isForgotPasswordMode && (
-                            isRegisterMode ? (
-                                <p className="text-white/60">Mode Registrasi Admin Akun</p>
-                            ) : (
-                                <p className="text-white/60">Hubungi Tim HC untuk pendaftaran akun baru.</p>
-                            )
+                        {isRegisterMode ? (
+                            <p className="text-white/60">Mode Registrasi Admin Akun</p>
+                        ) : (
+                            <p className="text-white/60">Hubungi Tim HC untuk pendaftaran akun baru.</p>
                         )}
                     </div>
 
