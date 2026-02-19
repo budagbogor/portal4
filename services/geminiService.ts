@@ -1,41 +1,102 @@
 
 import { GoogleGenAI } from "@google/genai";
+import OpenAI from "openai"; // For NVIDIA Fallback
 import { Message, Sender, AnalysisResult, AssessmentScores, CandidateProfile, BigFiveTraits } from "../types";
 import { supabase } from "./supabaseClient";
 
-// Cache the key in memory to avoid fetching on every single request during a session
+// Cache the keys in memory
 let cachedApiKey: string | null = null;
+let cachedNvidiaKey: string | null = null;
 
 // Helper to get the AI instance dynamically (Async now)
+// Helper to get Gemini instance
 const getGenAI = async () => {
-  // 1. Check Memory Cache
-  if (cachedApiKey) {
-    return new GoogleGenAI({ apiKey: cachedApiKey });
+  if (cachedApiKey) return new GoogleGenAI({ apiKey: cachedApiKey });
+
+  try {
+    const { data } = await supabase.from('system_settings').select('value').eq('key', 'gemini_api_key').single();
+    if (data?.value) cachedApiKey = data.value;
+  } catch (err) { console.warn("Supabase key fetch failed", err); }
+
+  const finalKey = cachedApiKey || (import.meta.env && import.meta.env.VITE_GEMINI_API_KEY) || '';
+  if (!finalKey) console.warn("Gemini API Key missing");
+
+  return new GoogleGenAI({ apiKey: finalKey });
+};
+
+// Helper to get NVIDIA instance
+const getNvidiaAI = async () => {
+  const proxyUrl = typeof window !== 'undefined' ? `${window.location.origin}/api/nvidia` : '/api/nvidia';
+
+  if (cachedNvidiaKey) {
+    console.log("DEBUG_v2: Using Cached NVIDIA Key with Proxy:", proxyUrl);
+    return new OpenAI({ apiKey: cachedNvidiaKey, baseURL: proxyUrl, dangerouslyAllowBrowser: true });
   }
 
   try {
-    // 2. Check Supabase (Global Settings)
-    const { data, error } = await supabase
-      .from('system_settings')
-      .select('value')
-      .eq('key', 'gemini_api_key')
-      .single();
+    const { data } = await supabase.from('system_settings').select('value').eq('key', 'nvidia_api_key').single();
+    if (data?.value) cachedNvidiaKey = data.value;
+  } catch (err) { console.warn("Supabase NVIDIA key fetch failed", err); }
 
-    if (data && data.value) {
-      cachedApiKey = data.value;
+  const finalKey = cachedNvidiaKey || (import.meta.env && import.meta.env.VITE_NVIDIA_API_KEY) || '';
+  if (!finalKey) console.warn("NVIDIA API Key missing");
+
+  console.log("DEBUG_v2: Initializing NVIDIA with Proxy:", proxyUrl);
+
+  return new OpenAI({
+    apiKey: finalKey,
+    baseURL: proxyUrl, // Use Full Proxy URL to avoid SDK issues
+    dangerouslyAllowBrowser: true // Client-side usage
+  });
+};
+
+const sendMessageToNvidia = async (
+  history: Message[],
+  latestUserMessage: string,
+  systemInstruction: string
+): Promise<{ text: string; analysis: AnalysisResult | null }> => {
+  console.log("Using NVIDIA Fallback...");
+  const nvidia = await getNvidiaAI();
+
+  const messages = [
+    { role: 'system', content: systemInstruction },
+    ...history.slice(0, -1).map(msg => ({
+      role: msg.sender === Sender.USER ? 'user' : 'assistant',
+      content: msg.text
+    } as any)),
+    { role: 'user', content: latestUserMessage }
+  ];
+
+  try {
+    const completion = await nvidia.chat.completions.create({
+      model: "meta/llama-3.1-70b-instruct",
+      messages: messages,
+      temperature: 0.3,
+      max_tokens: 1024,
+      top_p: 1,
+    });
+
+    const responseText = completion.choices[0]?.message?.content || "";
+
+    // Parse JSON from response
+    const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/);
+    let analysis: AnalysisResult | null = null;
+    let cleanText = responseText;
+
+    if (jsonMatch && jsonMatch[1]) {
+      try {
+        analysis = JSON.parse(jsonMatch[1]);
+        cleanText = responseText.replace(/```json\s*[\s\S]*?\s*```/, '').trim();
+      } catch (e) {
+        console.error("NVIDIA JSON Parse Error", e);
+      }
     }
-  } catch (err) {
-    console.warn("Failed to fetch API key from Supabase", err);
+
+    return { text: cleanText, analysis };
+  } catch (error: any) {
+    console.error("NVIDIA API Error:", error);
+    throw error;
   }
-
-  // 3. Fallback: Environment Variable
-  const finalKey = cachedApiKey || (import.meta.env && import.meta.env.VITE_GEMINI_API_KEY) || '';
-
-  if (!finalKey) {
-    console.warn("API Key is missing. Please configure it in Admin Settings.");
-  }
-
-  return new GoogleGenAI({ apiKey: finalKey });
 };
 
 export const sendMessageToGemini = async (
@@ -84,12 +145,15 @@ export const sendMessageToGemini = async (
     };
 
   } catch (error: any) {
-    console.error("Gemini API Error:", error);
-    // Return a friendly error message to the chat
-    return {
-      text: "Maaf, terjadi gangguan koneksi ke AI (" + (error.message || "Unknown error") + "). Silakan coba kirim pesan lagi.",
-      analysis: null
-    };
+    console.error("Gemini API Error, switching to NVIDIA:", error);
+    try {
+      return await sendMessageToNvidia(history, latestUserMessage, systemInstruction);
+    } catch (nvidiaError: any) {
+      return {
+        text: "Maaf, sistem sedang sibuk (Gemini & NVIDIA Fail). " + (nvidiaError.message || ""),
+        analysis: null
+      };
+    }
   }
 };
 
@@ -228,12 +292,38 @@ export const generateFinalSummary = async (
     };
 
   } catch (error) {
-    console.error("Error generating final summary:", error);
-    return {
-      summary: "Gagal membuat analisa. Data tidak cukup atau koneksi error.",
-      psychometrics: { openness: 50, conscientiousness: 50, extraversion: 50, agreeableness: 50, neuroticism: 50 },
-      cultureFitScore: 50,
-      starMethodScore: 5
-    };
+    console.error("Gemini Final Summary Error, Try NVIDIA:", error);
+
+    // Fallback logic for Final Summary
+    try {
+      const nvidia = await getNvidiaAI();
+      const completion = await nvidia.chat.completions.create({
+        model: "meta/llama-3.1-70b-instruct",
+        messages: [{ role: 'user', content: prompt } as any], // Prompt contains Role/Task inside
+        temperature: 0.3,
+        max_tokens: 2048
+      });
+
+      const responseText = completion.choices[0]?.message?.content || "{}";
+      const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/);
+      const jsonStr = jsonMatch ? jsonMatch[1] : responseText;
+
+      const json = JSON.parse(jsonStr);
+      return {
+        summary: json.summary || "Analisa NVIDIA tersedia.",
+        psychometrics: json.psychometrics,
+        cultureFitScore: json.cultureFitScore,
+        starMethodScore: json.starMethodScore
+      };
+
+    } catch (nvErr) {
+      console.error("NVIDIA Final Summary Error:", nvErr);
+      return {
+        summary: "Gagal membuat analisa (All AI Failed).",
+        psychometrics: { openness: 50, conscientiousness: 50, extraversion: 50, agreeableness: 50, neuroticism: 50 },
+        cultureFitScore: 50,
+        starMethodScore: 5
+      };
+    }
   }
 }

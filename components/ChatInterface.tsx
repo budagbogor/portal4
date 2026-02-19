@@ -16,6 +16,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, 
   const [input, setInput] = useState('');
   const [isListening, setIsListening] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-focus logic
+  useEffect(() => {
+    if (!isThinking) {
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100); // Small delay to ensure UI is ready
+    }
+  }, [isThinking]);
 
   // Speech Recognition Reference
   const recognitionRef = useRef<any>(null);
@@ -217,6 +227,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, 
               placeholder="Ketik jawaban Anda..."
               className="w-full bg-transparent border-none px-4 py-3.5 text-slate-800 placeholder-slate-400 focus:ring-0 text-sm md:text-base select-text"
               disabled={isThinking}
+              ref={inputRef}
               autoFocus
             />
           </div>

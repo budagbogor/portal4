@@ -22,5 +22,12 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    proxy: {
+      '/api/nvidia': {
+        target: 'https://integrate.api.nvidia.com/v1',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/nvidia/, ''),
+      },
+    },
   },
 });

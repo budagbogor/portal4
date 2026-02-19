@@ -1210,6 +1210,9 @@ function App() {
     if (currentView === 'recruiter_dashboard') {
         return (
             <div className="min-h-[100dvh] bg-slate-100 flex font-sans overflow-hidden">
+                <Suspense fallback={null}>
+                    <DocumentationModal isOpen={isDocsOpen} onClose={() => setIsDocsOpen(false)} role={docRole} />
+                </Suspense>
                 {/* Sidebar */}
                 <div className="w-64 bg-mobeng-darkblue text-white flex flex-col shadow-2xl z-20 hidden md:flex">
                     <div className="p-6 border-b border-white/10">
