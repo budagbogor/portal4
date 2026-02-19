@@ -56,6 +56,7 @@ function App() {
     // --- RECRUITER AUTH STATE ---
     const [loginEmail, setLoginEmail] = useState('');
     const [loginPassword, setLoginPassword] = useState('');
+    const [loginName, setLoginName] = useState(''); // NEW: Full Name for Registration
     const [authLoading, setAuthLoading] = useState(false);
     const [isRegisterMode, setIsRegisterMode] = useState(false);
 
@@ -609,6 +610,11 @@ function App() {
                 const { data, error } = await supabase.auth.signUp({
                     email: loginEmail,
                     password: loginPassword,
+                    options: {
+                        data: {
+                            full_name: loginName
+                        }
+                    }
                 });
 
                 if (error) throw error;
@@ -866,6 +872,19 @@ function App() {
                     </div>
 
                     <form onSubmit={handleRecruiterLogin} className="space-y-4">
+                        {isRegisterMode && (
+                            <div>
+                                <label className="block text-xs font-bold text-blue-300 uppercase mb-2">Nama Lengkap</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={loginName}
+                                    onChange={(e) => setLoginName(e.target.value)}
+                                    className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-mobeng-blue transition-all"
+                                    placeholder="Nama Lengkap Admin"
+                                />
+                            </div>
+                        )}
                         <div>
                             <label className="block text-xs font-bold text-blue-300 uppercase mb-2">Email</label>
                             <input
