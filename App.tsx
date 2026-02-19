@@ -58,7 +58,9 @@ function App() {
     const [loginPassword, setLoginPassword] = useState('');
     const [loginName, setLoginName] = useState(''); // NEW: Full Name for Registration
     const [authLoading, setAuthLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false); // NEW: Toggle Password Visibility
     const [isRegisterMode, setIsRegisterMode] = useState(false);
+    const [isForgotPasswordMode, setIsForgotPasswordMode] = useState(false); // NEW: Forgot Password State
 
     // --- USER MANAGEMENT STATE ---
     const [users, setUsers] = useState<Profile[]>([]);
@@ -600,6 +602,28 @@ function App() {
         }
     };
 
+    const handleForgotPassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!loginEmail) {
+            alert("Mohon isi email terlebih dahulu.");
+            return;
+        }
+        setAuthLoading(true);
+        try {
+            const { error } = await supabase.auth.resetPasswordForEmail(loginEmail, {
+                redirectTo: window.location.origin + window.location.pathname + '?reset=true',
+            });
+            if (error) throw error;
+            alert("Link reset password telah dikirim ke email Anda. Silakan cek inbox/spam.");
+            setIsForgotPasswordMode(false);
+        } catch (error: any) {
+            console.error("Reset Password Error:", error);
+            alert(`Gagal mengirim link: ${error.message}`);
+        } finally {
+            setAuthLoading(false);
+        }
+    };
+
     const handleRecruiterLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setAuthLoading(true);
@@ -673,19 +697,15 @@ function App() {
 
     const handleDeleteUser = async (userId: string, email: string) => {
         if (window.confirm(`Yakin hapus user: ${email}? User tidak akan bisa login lagi.`)) {
-            // NOTE: In standard Supabase, deleting from 'auth.users' requires Service Role (Backend).
-            // From Client side, we can only delete from 'profiles'. 
-            // BUT: if we delete 'profiles', the user still exists in Auth (can login but has no profile).
-            // WORKAROUND FOR MVP: We just delete the Profile. Auth user remains but becomes "Orphaned".
-            // Ideally: Use an Edge Function to delete from auth.users.
-            // For now, let's try deleting profile.
+            // Updated to use RPC for proper deletion from auth.users
+            const { error } = await supabase.rpc('delete_user_by_email', { user_email: email });
 
-            const { error } = await supabase.from('profiles').delete().eq('id', userId);
             if (error) {
+                console.error("Delete user error:", error);
                 alert("Gagal menghapus user: " + error.message);
             } else {
-                setUsers(prev => prev.filter(u => u.id !== userId));
-                alert("User berhasil dihapus dari sistem manajemen.");
+                setUsers(prev => prev.filter(u => u.email !== email));
+                alert("User berhasil dihapus permanen.");
             }
         }
     };
@@ -867,62 +887,119 @@ function App() {
                         <div className="w-16 h-16 bg-mobeng-blue rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-500/30">
                             <Lock className="text-white w-8 h-8" />
                         </div>
-                        <h2 className="text-2xl font-bold text-white mb-2">{isRegisterMode ? 'Buat Akun Admin' : 'Login Admin'}</h2>
-                        <p className="text-blue-200 text-sm">Akses khusus tim rekrutmen Mobeng.</p>
+                        <h2 className="text-2xl font-bold text-white mb-2">
+                            {isForgotPasswordMode ? 'Reset Password' : (isRegisterMode ? 'Buat Akun Admin' : 'Login Admin')}
+                        </h2>
+                        <p className="text-blue-200 text-sm">
+                            {isForgotPasswordMode ? 'Masukkan email untuk menerima link reset.' : 'Akses khusus tim rekrutmen Mobeng.'}
+                        </p>
                     </div>
 
-                    <form onSubmit={handleRecruiterLogin} className="space-y-4">
-                        {isRegisterMode && (
+                    {isForgotPasswordMode ? (
+                        /* FORGOT PASSWORD FORM */
+                        <form onSubmit={handleForgotPassword} className="space-y-4">
                             <div>
-                                <label className="block text-xs font-bold text-blue-300 uppercase mb-2">Nama Lengkap</label>
+                                <label className="block text-xs font-bold text-blue-300 uppercase mb-2">Email</label>
                                 <input
-                                    type="text"
+                                    type="email"
                                     required
-                                    value={loginName}
-                                    onChange={(e) => setLoginName(e.target.value)}
+                                    value={loginEmail}
+                                    onChange={(e) => setLoginEmail(e.target.value)}
                                     className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-mobeng-blue transition-all"
-                                    placeholder="Nama Lengkap Admin"
+                                    placeholder="nama@mobeng.co.id"
                                 />
                             </div>
-                        )}
-                        <div>
-                            <label className="block text-xs font-bold text-blue-300 uppercase mb-2">Email</label>
-                            <input
-                                type="email"
-                                required
-                                value={loginEmail}
-                                onChange={(e) => setLoginEmail(e.target.value)}
-                                className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-mobeng-blue transition-all"
-                                placeholder="nama@mobeng.co.id"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-blue-300 uppercase mb-2">Password</label>
-                            <input
-                                type="password"
-                                required
-                                value={loginPassword}
-                                onChange={(e) => setLoginPassword(e.target.value)}
-                                className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-mobeng-blue transition-all"
-                                placeholder="••••••••"
-                            />
-                        </div>
+                            <button
+                                type="submit"
+                                disabled={authLoading}
+                                className="w-full bg-mobeng-blue hover:bg-blue-600 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-500/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed mt-4"
+                            >
+                                {authLoading ? <Loader2 className="animate-spin mx-auto" /> : 'Kirim Link Reset'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setIsForgotPasswordMode(false)}
+                                className="w-full text-white/60 hover:text-white text-sm font-medium py-2 transition-colors"
+                            >
+                                Batal, kembali ke login
+                            </button>
+                        </form>
+                    ) : (
+                        /* LOGIN / REGISTER FORM */
+                        <form onSubmit={handleRecruiterLogin} className="space-y-4">
+                            {isRegisterMode && (
+                                <div>
+                                    <label className="block text-xs font-bold text-blue-300 uppercase mb-2">Nama Lengkap</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={loginName}
+                                        onChange={(e) => setLoginName(e.target.value)}
+                                        className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-mobeng-blue transition-all"
+                                        placeholder="Nama Lengkap Admin"
+                                    />
+                                </div>
+                            )}
+                            <div>
+                                <label className="block text-xs font-bold text-blue-300 uppercase mb-2">Email</label>
+                                <input
+                                    type="email"
+                                    required
+                                    value={loginEmail}
+                                    onChange={(e) => setLoginEmail(e.target.value)}
+                                    className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-mobeng-blue transition-all"
+                                    placeholder="nama@mobeng.co.id"
+                                />
+                            </div>
+                            <div className="relative">
+                                <label className="block text-xs font-bold text-blue-300 uppercase mb-2">Password</label>
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    required
+                                    value={loginPassword}
+                                    onChange={(e) => setLoginPassword(e.target.value)}
+                                    className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-mobeng-blue transition-all pr-12"
+                                    placeholder="••••••••"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-4 top-[38px] text-white/50 hover:text-white transition-colors"
+                                >
+                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                </button>
+                            </div>
 
-                        <button
-                            type="submit"
-                            disabled={authLoading}
-                            className="w-full bg-mobeng-blue hover:bg-blue-600 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-500/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed mt-4"
-                        >
-                            {authLoading ? <Loader2 className="animate-spin mx-auto" /> : (isRegisterMode ? 'Daftar' : 'Masuk Dashboard')}
-                        </button>
-                    </form>
+                            {!isRegisterMode && (
+                                <div className="text-right">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsForgotPasswordMode(true)}
+                                        className="text-xs text-blue-300 hover:text-white transition-colors font-bold"
+                                    >
+                                        Lupa Password?
+                                    </button>
+                                </div>
+                            )}
+
+                            <button
+                                type="submit"
+                                disabled={authLoading}
+                                className="w-full bg-mobeng-blue hover:bg-blue-600 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-500/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed mt-4"
+                            >
+                                {authLoading ? <Loader2 className="animate-spin mx-auto" /> : (isRegisterMode ? 'Daftar' : 'Masuk Dashboard')}
+                            </button>
+                        </form>
+                    )}
 
                     <div className="mt-6 text-center text-sm">
                         {/* HIDE PUBLIC REGISTER BUTTON - ONLY VIA LINK */}
-                        {isRegisterMode ? (
-                            <p className="text-white/60">Mode Registrasi Admin Akun</p>
-                        ) : (
-                            <p className="text-white/60">Hubungi Tim HC untuk pendaftaran akun baru.</p>
+                        {!isForgotPasswordMode && (
+                            isRegisterMode ? (
+                                <p className="text-white/60">Mode Registrasi Admin Akun</p>
+                            ) : (
+                                <p className="text-white/60">Hubungi Tim HC untuk pendaftaran akun baru.</p>
+                            )
                         )}
                     </div>
 
