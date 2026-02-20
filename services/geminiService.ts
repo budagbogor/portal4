@@ -259,6 +259,8 @@ export const generateFinalSummary = async (
             "cultureFitScore": number,
             "starMethodScore": number
         }
+        
+        IMPORTANT: You must output valid JSON ONLY. Do not output any markdown text outside the JSON object. The 'summary' field should contain the markdown text.
     `;
 
   try {
@@ -319,7 +321,7 @@ export const generateFinalSummary = async (
         json = JSON.parse(jsonStr);
       } catch (e) {
         // If JSON parse fails, check if the raw text is actually just the summary
-        console.warn("NVIDIA JSON Parse Error on Summary", e);
+        console.log("NVIDIA returned raw text instead of JSON. Falling back to text summary.");
         // Fallback: Use the whole text as summary
         json = {
           summary: responseText.substring(0, 4000), // Increased Limit to 4000 chars
