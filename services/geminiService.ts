@@ -228,7 +228,9 @@ export const generateFinalSummary = async (
             - > 85: High Innovation, Collaborative, Strong Integrity.
            
         2. **Psychometrics (Big Five)**:
-           - Derive OCEAN traits strictly from behavioral evidence.
+           - Derive OCEAN traits strictly from behavioral evidence in the transcript.
+           - Scale: 0-100.
+           - **IMPORTANT**: If the transcript is too short or lacks signal for a specific trait, use the population average (**50**) as a neutral baseline. DO NOT output **0** unless there is clear evidence of extremely low trait presence.
            
         3. **Executive Summary Text (Bahasa Indonesia)**:
            Must follow this EXACT Markdown format:
@@ -261,11 +263,11 @@ export const generateFinalSummary = async (
         {
             "summary": "The formatted text string above...",
             "psychometrics": {
-                "openness": number,
-                "conscientiousness": number,
-                "extraversion": number,
-                "agreeableness": number,
-                "emotionalStability": number
+                "openness": number, // 0-100
+                "conscientiousness": number, // 0-100
+                "extraversion": number, // 0-100
+                "agreeableness": number, // 0-100
+                "emotionalStability": number // 0-100
             },
             "cultureFitScore": number, // 0-100
             "starMethodScore": number // 0-10 (Strictly max 10)
@@ -297,14 +299,22 @@ export const generateFinalSummary = async (
       json = JSON.parse(cleanText);
     }
 
+    // Helper to normalize scores to 0-100 scale
+    const norm = (val: number | undefined) => {
+      if (typeof val !== 'number') return 50;
+      if (val <= 1) return val * 100; // 0.8 -> 80
+      if (val <= 10) return val * 10; // 8 -> 80
+      return val;
+    };
+
     return {
       summary: json.summary || "Analisa tidak tersedia.",
       psychometrics: {
-        openness: json.psychometrics?.openness || 50,
-        conscientiousness: json.psychometrics?.conscientiousness || 50,
-        extraversion: json.psychometrics?.extraversion || 50,
-        agreeableness: json.psychometrics?.agreeableness || 50,
-        neuroticism: json.psychometrics?.emotionalStability || 50
+        openness: norm(json.psychometrics?.openness),
+        conscientiousness: norm(json.psychometrics?.conscientiousness),
+        extraversion: norm(json.psychometrics?.extraversion),
+        agreeableness: norm(json.psychometrics?.agreeableness),
+        neuroticism: norm(json.psychometrics?.emotionalStability)
       },
       cultureFitScore: json.cultureFitScore || 50,
       starMethodScore: json.starMethodScore || 5
