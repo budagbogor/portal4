@@ -28,6 +28,18 @@ export const ExecutiveSummaryViewer: React.FC<ExecutiveSummaryViewerProps> = ({ 
         // Clean Preamble (remove "Executive Summary (...):")
         preamble = preamble.replace(/^Executive Summary.*?:/i, '').trim();
 
+        // 3. Extract Final Verdict (if present)
+        // Looks for "**Final Verdict:**" or "Final Verdict:" at the end
+        let verdict = "";
+        const verdictRegex = /(?:\*\*|)?Final Verdict:(?:\*\*|)?\s*(.*)$/i;
+        const verdictMatch = pointsRaw.match(verdictRegex);
+
+        if (verdictMatch) {
+            verdict = verdictMatch[1].trim();
+            // Remove verdict from pointsRaw so it doesn't get attached to the last point
+            pointsRaw = pointsRaw.replace(verdictRegex, '').trim();
+        }
+
         // 2. Extract Points using Regex
         // Matches "1. Title: Content"
         // Supports bold markers like **1. Title:**
@@ -59,7 +71,7 @@ export const ExecutiveSummaryViewer: React.FC<ExecutiveSummaryViewerProps> = ({ 
             });
         }
 
-        return { preamble, points };
+        return { preamble, points, verdict };
     }, [summary]);
 
     if (!parsedData) return <p className="text-slate-400 italic">Analisa belum tersedia.</p>;
@@ -100,8 +112,16 @@ export const ExecutiveSummaryViewer: React.FC<ExecutiveSummaryViewerProps> = ({ 
                 ))}
             </div>
 
-            {/* Footer / Verdict if likely at end */}
-            {parsedData.points.length === 0 && (
+            {/* Footer / Verdict */}
+            {parsedData.verdict && (
+                <div className="mt-8 p-4 bg-slate-900 text-white rounded-xl shadow-lg border border-slate-700 flex flex-col items-center justify-center text-center">
+                    <span className="text-xs uppercase tracking-widest text-slate-400 font-bold mb-1">Final Verdict</span>
+                    <span className="text-2xl font-black tracking-tight">{parsedData.verdict.replace(/\*\*/g, '')}</span>
+                </div>
+            )}
+
+            {/* Fallback if no points found */}
+            {parsedData.points.length === 0 && !parsedData.verdict && (
                 <div className="prose prose-sm text-slate-600">
                     {summary}
                 </div>
