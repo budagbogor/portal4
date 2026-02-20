@@ -296,9 +296,9 @@ function App() {
             timestamp: new Date(data.created_at),
             simulationScores: data.simulation_scores || { sales: 0, leadership: 0, operations: 0, cx: 0 },
             simulationFeedback: data.final_summary ? "Lihat Kesimpulan Akhir di bawah." : "Belum ada analisis.",
-            psychometrics: data.psychometrics,
+            psychometrics: data.psychometrics || { openness: 0, conscientiousness: 0, extraversion: 0, agreeableness: 0, neuroticism: 0 },
             cultureFitScore: data.culture_fit_score || 0,
-            starMethodScore: 0,
+            starMethodScore: data.star_method_score || 0, // FIXED: Map correctly from DB
             logicScore: data.logic_score || 0,
             finalSummary: data.final_summary || "Tidak ada data.",
             status: data.status || 'Consider',
@@ -526,6 +526,7 @@ function App() {
                 profile_data: candidateProfile,
                 simulation_scores: simData.scores,
                 psychometrics: finalReport.psychometrics,
+                star_method_score: finalReport.starMethodScore, // ADDED: Persist STAR Score
                 final_summary: finalReport.summary,
                 cheat_count: cheatCount,
                 chat_history: messages // NEW: Save Messages to DB
