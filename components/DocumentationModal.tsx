@@ -274,7 +274,7 @@ const DocumentationModal: React.FC<DocumentationModalProps> = ({ isOpen, onClose
                 <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-3 text-lg">
                   <Database size={20} className="text-green-500" /> 3. Data Persistence (Supabase)
                 </h3>
-                <div className="bg-white border border-slate-200 rounded-xl p-5">
+                <div className="bg-white border border-slate-200 rounded-xl p-5 mb-8">
                   <p className="text-xs text-slate-600 leading-relaxed mb-2">
                     Semua hasil tes disimpan di Cloud Database (Supabase) pada tabel <code>submissions</code>. Data yang disimpan meliputi:
                   </p>
@@ -285,6 +285,55 @@ const DocumentationModal: React.FC<DocumentationModalProps> = ({ isOpen, onClose
                     <li>Integrity Log (Cheat Count)</li>
                     <li><strong>Chat History (Transcript Lengkap)</strong></li>
                   </ul>
+                </div>
+              </section>
+
+              {/* 4. Glossary / Definisi Istilah */}
+              <section className="border-t border-slate-200 pt-6">
+                <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4 text-lg">
+                  <BookOpen size={20} className="text-purple-600" /> 4. Kamus Istilah & Metrik Penilaian
+                </h3>
+                <div className="grid grid-cols-1 gap-3">
+                  <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                    <h4 className="font-bold text-xs text-slate-800">Final Weighted Score</h4>
+                    <p className="text-[11px] text-slate-600 mt-1">
+                      Nilai akhir penentu kelulusan. Rumus: <code>(Rata-rata Simulasi x 60%) + (Skor Logika x 40%)</code>.
+                      Digunakan untuk menyeimbangkan antara kemampuan teknis/behavioral (Simulasi) dan kemampuan kognitif dasar (Logika).
+                    </p>
+                  </div>
+                  <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                    <h4 className="font-bold text-xs text-slate-800">Logic Score (GCA Proxy)</h4>
+                    <p className="text-[11px] text-slate-600 mt-1">
+                      Representasi dari <i>General Cognitive Ability</i>. Skala 0-10. Mengukur kemampuan problem solving dasar, numerik, dan verbal.
+                      Score &lt; 6.0 dianggap berisiko tinggi untuk posisi operasional yang membutuhkan pemecahan masalah cepat.
+                    </p>
+                  </div>
+                  <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                    <h4 className="font-bold text-xs text-slate-800">Culture Fit Score</h4>
+                    <p className="text-[11px] text-slate-600 mt-1">
+                      Skala 0-100. Mengukur kecocokan kandidat dengan budaya "Mobeng Way" yang dinilai oleh AI berdasarkan jawaban simulasi.
+                      Fokus pada: Integritas (Jujur), Service Orientation, dan Operational Discipline. &lt; 60 mengindikasikan ketidakcocokan budaya (Toxic/Dishonest).
+                    </p>
+                  </div>
+                  <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                    <h4 className="font-bold text-xs text-slate-800">STAR Method Score</h4>
+                    <p className="text-[11px] text-slate-600 mt-1">
+                      Skala 1-5. Mengukur seberapa terstruktur jawaban kandidat.
+                      <strong>S</strong>ituation (Situasi), <strong>T</strong>ask (Tugas), <strong>A</strong>ction (Tindakan), <strong>R</strong>esult (Hasil).
+                      Kandidat senior diharapkan memiliki skor STAR tinggi (4-5).
+                    </p>
+                  </div>
+                  <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                    <h4 className="font-bold text-xs text-slate-800">Psychometrics (OCEAN / Big Five)</h4>
+                    <p className="text-[11px] text-slate-600 mt-1">
+                      Profil kepribadian yang diekstrak AI dari pola bahasa dan keputusan kandidat:
+                      <br />• <strong>Openness</strong>: Keterbukaan pada hal baru (belajar skill baru).
+                      <br />• <strong>Conscientiousness</strong>: Ketelitian & Disiplin (SOP).
+                      <br />• <strong>Extraversion</strong>: Energi sosial (Sales/Service).
+                      <br />• <strong>Agreeableness</strong>: Keramahan & Empati (Kerjasama tim).
+                      <br />• <strong>Neuroticism</strong>: Kestabilan emosi (Handling complain).
+                    </p>
+                  </div>
                 </div>
               </section>
 
