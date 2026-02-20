@@ -200,18 +200,21 @@ export const generateFinalSummary = async (
         - **Operational Discipline**: Workshops require strict SOP adherence. Did they respect rules?
         - **Emergent Leadership**: Taking ownership when the workshop is busy/chaos.
 
-        **4. Googleyness (Culture Fit)**
-        - **Customer Obsession**: Willing to go extra mile for customer safety?
-        - **Integrity**: ZERO TOLERANCE for cheating/lying (Crucial in auto service).
+        **4. Mobeng Culture Fit (Core Values)**
+        - **Introspeksi**: Can they learn from mistakes? (Self-reflection).
+        - **Innovasi**: Do they have new ideas or better methods?
+        - **Komitmen**: Do they go above and beyond to achieve goals?
+        - **Kolaborasi**: Win-win cooperation and mutual trust.
+        - **Taglines**: Learning & Respek, Melawan Arus, Fokus, Komit, Siap Berubah.
 
         ---
 
         ### OUTPUT REQUIREMENT (JSON):
         
-        1. **Culture Fit Score** (1-100):
-           - Based on Integrity & Service Orientation.
-           - < 60: Toxic, Dishonest, or "Sok Tahu".
-           - > 85: High Integrity, Customer First, Hardworking.
+         1. **Culture Fit Score** (1-100):
+            - Based on Mobeng Values: Introspeksi, Innovasi, Komitmen, Kolaborasi.
+            - < 60: Low Commitment, No Introspection, or "Sok Tahu".
+            - > 85: High Innovation, Collaborative, Strong Integrity.
            
         2. **Psychometrics (Big Five)**:
            - Derive OCEAN traits strictly from behavioral evidence.
@@ -228,8 +231,8 @@ export const generateFinalSummary = async (
            **2. Automotive Retail & Technical Fit (RRK):**
            - [Analysis of sales capability, technical understanding, and operational awareness.]
 
-           **3. Leadership, Integrity & 'The Mobeng Way':**
-           - [Analysis of ownership, honesty (crucial), and discipline.]
+           **3. Leadership, Integrity & 'The Mobeng Way' (Culture):**
+           - [Analysis of Introspeksi, Innovasi, Komitmen, and Kolaborasi.]
            
            **4. Psychometric Insights (OCEAN):**
            - [Highlight dominant traits (e.g., 'High Conscientiousness important for SOP adherence', 'High Agreeableness good for CS').]

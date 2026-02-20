@@ -311,8 +311,11 @@ const DocumentationModal: React.FC<DocumentationModalProps> = ({ isOpen, onClose
                   <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
                     <h4 className="font-bold text-xs text-slate-800">Culture Fit Score</h4>
                     <p className="text-[11px] text-slate-600 mt-1">
-                      Skala 0-100. Mengukur kecocokan kandidat dengan budaya "Mobeng Way" yang dinilai oleh AI berdasarkan jawaban simulasi.
-                      Fokus pada: Integritas (Jujur), Service Orientation, dan Operational Discipline. &lt; 60 mengindikasikan ketidakcocokan budaya (Toxic/Dishonest).
+                      Skala 0-100. Mengukur kecocokan dengan **Budaya Mobeng**:
+                      <br />1. **Introspeksi**: Berpikir serius, belajar dari kesalahan.
+                      <br />2. **Innovasi**: Ide baru, metode lebih baik (Melawan Arus).
+                      <br />3. **Komitmen**: Fokus mencapai tujuan (Go extra mile).
+                      <br />4. **Kolaborasi**: Kerjasama win-win & saling percaya (Respek).
                     </p>
                   </div>
                   <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
