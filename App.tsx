@@ -6,8 +6,7 @@ import { sendMessageToGemini, generateFinalSummary } from './services/geminiServ
 import { supabase } from './services/supabaseClient'; // Import Supabase Client
 import { LogicTest, QUESTION_SETS } from './components/LogicTest'; // Keep eager for constants
 import { Briefcase, CheckCircle2, ChevronRight, BarChart3, X, Zap, Lock, UserCircle2, ArrowLeft, BookOpen, HelpCircle, CheckCircle, Save, LogOut, Phone, GraduationCap, Building2, Printer, Share2, Settings, Sliders, MonitorPlay, FileText, MessageSquare, ExternalLink, BrainCircuit, ArrowRight, Loader2, Timer, AlertTriangle, Brain, Star, Sparkles, ShieldAlert, Server, UserPlus, Send, Ban, Eye, EyeOff, MousePointerClick, Smartphone, Globe, ShieldCheck, Trash2, ChevronDown, ChevronUp, Camera, Mic, Users, Key } from 'lucide-react';
-import ReactMarkdown from 'react-markdown'; // Import ReactMarkdown for Dashboard
-import remarkGfm from 'remark-gfm';
+import { ExecutiveSummaryViewer } from './components/ExecutiveSummaryViewer'; // Import ExecutiveSummaryViewer for Dashboard
 
 // --- LAZY LOAD HEAVY COMPONENTS ---
 // Optimizes initial load time by only fetching these bundles when needed
@@ -1211,12 +1210,9 @@ function App() {
                             <h3 className="font-bold text-slate-800 text-lg mb-4 flex items-center gap-2 border-b border-slate-100 pb-2">
                                 <Sparkles className="text-mobeng-yellow" /> Executive Summary (AI)
                             </h3>
-                            <ReactMarkdown
-                                remarkPlugins={[remarkGfm]}
-                                className="prose prose-sm print:prose-xs max-w-none text-slate-700 leading-relaxed print:leading-snug text-justify"
-                            >
-                                {selectedSubmission.finalSummary || "Analisa belum tersedia."}
-                            </ReactMarkdown>
+                            <div className="border border-slate-200 rounded-xl p-6 bg-slate-50/30">
+                                <ExecutiveSummaryViewer summary={selectedSubmission.finalSummary} />
+                            </div>
                         </div>
 
                         {/* Chat Transcript Accordion */}
