@@ -71,7 +71,7 @@ const sendMessageToNvidia = async (
     const completion = await nvidia.chat.completions.create({
       model: "meta/llama-3.1-70b-instruct",
       messages: messages,
-      temperature: 0.3,
+      temperature: 0.1, // REDUCED TO 0.1
       max_tokens: 1024,
       top_p: 1,
     });
@@ -112,7 +112,7 @@ export const sendMessageToGemini = async (
       model: "gemini-2.0-flash", // UPGRADED MODEL for better reasoning
       config: {
         systemInstruction: systemInstruction,
-        temperature: 0.3,
+        temperature: 0.1, // REDUCED TO 0.1 FOR REALISTIC/DETERMINISTIC OUTPUT
       },
       history: history.slice(0, -1).map(msg => ({
         role: msg.sender === Sender.USER ? 'user' : 'model',
@@ -266,7 +266,7 @@ export const generateFinalSummary = async (
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: {
         responseMimeType: "application/json",
-        temperature: 0.3,
+        temperature: 0.1, // REDUCED TO 0.1
       }
     });
 
@@ -303,7 +303,7 @@ export const generateFinalSummary = async (
       const completion = await nvidia.chat.completions.create({
         model: "meta/llama-3.1-70b-instruct",
         messages: [{ role: 'user', content: prompt }], // Prompt contains Role/Task inside
-        temperature: 0.3,
+        temperature: 0.1, // REDUCED TO 0.1
         max_tokens: 2048
       });
 
