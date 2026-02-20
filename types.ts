@@ -145,6 +145,9 @@ Anda sedang melakukan servis berkala. Saat membongkar, Anda menemukan *shockbrea
       systemInstruction: `You are a strict AI Asst. Store Leader evaluating a Mechanic candidate at Mobeng. 
     ${CRITICAL_EVALUATION_PROTOCOL}
 
+    **INTERACTION RULE:**
+    For each scenario, wait for the candidate's answer. If the answer is brief or generic, ASK ONE FOLLOW-UP QUESTION to probe deeper (max 2 turns per scenario). After the second answer (or if the first was detailed), proceed to the next scenario.
+
     **INSTRUCTIONS:**
     Present 5 scenarios sequentially.
     The user has just received Scenario 1.
@@ -190,6 +193,9 @@ Saat Store Leader sedang cuti, Anda memegang kendali toko. Tiba-tiba di area ben
       systemInstruction: `You are a tough AI Store Leader evaluating your potential Assistant.
     ${CRITICAL_EVALUATION_PROTOCOL}
 
+    **INTERACTION RULE:**
+    For each scenario, wait for the candidate's answer. If the answer is brief or generic, ASK ONE FOLLOW-UP QUESTION to probe deeper (max 2 turns per scenario). After the second answer (or if the first was detailed), proceed to the next scenario.
+
     **SCENARIO LIST:**
     1. **Conflict vs Service**: Mechanics fighting vs Customer paying.
        - *Pass*: Decisive action. Signal mechanics to stop/separate, serve customer (Revenue first), then discipline mechanics sternly.
@@ -231,6 +237,9 @@ Saat Store Leader sedang cuti, Anda memegang kendali toko. Tiba-tiba di area ben
 Omzet toko bulan ini baru mencapai 60% padahal sudah tanggal 25. Di sisi lain, manpower tim berkurang karena 1 mekanik sakit. Anda harus mengejar sales TAPI operasional keteteran. Apa strategi Anda untuk sisa 5 hari ini?`,
       systemInstruction: `You are a critical Area Coordinator evaluating a Store Leader candidate.
     ${CRITICAL_EVALUATION_PROTOCOL}
+
+    **INTERACTION RULE:**
+    For each scenario, wait for the candidate's answer. If the answer is brief or generic, ASK ONE FOLLOW-UP QUESTION to probe deeper (max 2 turns per scenario). After the second answer (or if the first was detailed), proceed to the next scenario.
 
     **SCENARIO LIST:**
     1. **Sales Crunch**: Low sales + Low manpower.
@@ -274,6 +283,9 @@ Anda membawahi 5 Toko. Toko A salesnya tertinggi (150%) TAPI komplain pelanggann
       systemInstruction: `You are a Strategic Regional Head evaluating an Area Coordinator.
     ${CRITICAL_EVALUATION_PROTOCOL}
 
+    **INTERACTION RULE:**
+    For each scenario, wait for the candidate's answer. If the answer is brief or generic, ASK ONE FOLLOW-UP QUESTION to probe deeper (max 2 turns per scenario). After the second answer (or if the first was detailed), proceed to the next scenario.
+
     **SCENARIO LIST:**
     1. **High Sales/High Complaint vs Low Sales/High CX**.
        - *Pass*: Fix Toko A. Sales with bad CX is a ticking time bomb (Churn). High complaint = Bad Process.
@@ -315,6 +327,9 @@ Anda membawahi 5 Toko. Toko A salesnya tertinggi (150%) TAPI komplain pelanggann
 Revenue Region Anda turun 15% Year-on-Year (YoY). Kompetitor utama sedang melakukan strategi 'Bakar Uang'. COO dan Kepala Cabang menuntut Anda membuat strategi recovery dalam 3 bulan TANPA ikut perang harga (margin harus dijaga). Apa 3 pilar utama strategi Anda?`,
       systemInstruction: `You are the COO (Chief Operating Officer) evaluating a Regional Head.
     ${CRITICAL_EVALUATION_PROTOCOL}
+
+    **INTERACTION RULE:**
+    For each scenario, wait for the candidate's answer. If the answer is brief or generic, ASK ONE FOLLOW-UP QUESTION to probe deeper (max 2 turns per scenario). After the second answer (or if the first was detailed), proceed to the next scenario.
 
     **SCENARIO LIST:**
     1. **Revenue Crisis**.
