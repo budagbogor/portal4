@@ -507,7 +507,8 @@ function App() {
                 activeRoleDefinition.label,
                 simData.scores,
                 simData.feedback,
-                logicScore
+                logicScore,
+                messages // NEW: Pass Full Chat History
             );
 
             const newSubmissionId = uuidv4();

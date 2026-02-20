@@ -13,6 +13,9 @@ interface ScoreCardProps {
 }
 
 const ScoreCard: React.FC<ScoreCardProps> = ({ scores, psychometrics, cultureFit, starScore, feedback }) => {
+    // SAFETY: Normalize STAR Score if AI returns 100-scale instead of 10-scale
+    const safeStarScore = starScore && starScore > 10 ? starScore / 10 : starScore;
+
     // SAFETY CHECK: Prevent crash if scores are missing
     if (!scores) {
         return (
@@ -158,9 +161,9 @@ const ScoreCard: React.FC<ScoreCardProps> = ({ scores, psychometrics, cultureFit
                     </div>
                     <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
                         <div className="text-[10px] text-slate-500 font-bold uppercase mb-1 flex items-center gap-1"><Star size={10} className="text-orange-400" /> STAR Method</div>
-                        <div className="text-xl font-bold text-mobeng-orange">{starScore}/10</div>
+                        <div className="text-xl font-bold text-mobeng-orange">{safeStarScore}/10</div>
                         <div className="w-full bg-slate-200 h-1.5 rounded-full mt-2">
-                            <div className="bg-mobeng-orange h-1.5 rounded-full" style={{ width: `${starScore * 10}%` }}></div>
+                            <div className="bg-mobeng-orange h-1.5 rounded-full" style={{ width: `${(safeStarScore || 0) * 10}%` }}></div>
                         </div>
                     </div>
                 </div>

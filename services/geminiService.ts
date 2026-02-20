@@ -169,8 +169,12 @@ export const generateFinalSummary = async (
   role: string,
   simScores: AssessmentScores,
   simFeedback: string,
-  logicScore: number
+  logicScore: number,
+  chatHistory: Message[] = [] // NEW: Accept full chat history
 ): Promise<FinalAnalysisReport> => {
+  // Convert chat history to readable transcript
+  const transcript = chatHistory.map(m => `${m.sender === 'user' ? 'Candidate' : 'Recruiter'}: ${m.text}`).join('\n');
+
   // 1. Define Prompt OUTSIDE try-catch to ensure availability for fallback
   const prompt = `
         Role: Senior I/O Psychologist & Elite Recruiter (Google Standard).
@@ -187,7 +191,8 @@ export const generateFinalSummary = async (
         DATA POINTS:
         1. **General Cognitive Ability (GCA) Baseline**: ${logicScore.toFixed(1)}/10 (Logic Test Score)
         2. **Behavioral Competencies (SJT)**: Sales(${simScores.sales}), Leadership(${simScores.leadership}), Ops(${simScores.operations}), CX(${simScores.cx})
-        3. **Interview Transcript Analysis**: "${simFeedback}"
+        3. **Interview Transcript Analysis**: 
+           "${transcript || simFeedback}" (If transcript empty, use summary)
         
         ### ANALYSIS FRAMEWORK (MANDATORY):
         
@@ -262,8 +267,8 @@ export const generateFinalSummary = async (
                 "agreeableness": number,
                 "emotionalStability": number
             },
-            "cultureFitScore": number,
-            "starMethodScore": number
+            "cultureFitScore": number, // 0-100
+            "starMethodScore": number // 0-10 (Strictly max 10)
         }
         
         IMPORTANT: You must output valid JSON ONLY. Do not output any markdown text outside the JSON object. The 'summary' field should contain the markdown text.
