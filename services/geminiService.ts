@@ -176,6 +176,12 @@ export const generateFinalSummary = async (
         Role: Senior I/O Psychologist & Elite Recruiter (Google Standard).
         Task: Conduct a high-level candidate assessment using the "Google Hiring Attributes" framework.
         
+        CONTEXT (Mobeng):
+        - Place: "Toko" (not Bengkel).
+        - Hierarchy: Mekanik -> Assist. Store Leader -> Store Leader -> Area Coord -> Regional Head.
+        - Products: Service RMB (Rasa Mesin Baru), Oli X-TEN (Ester).
+        - Services: Ganti Oli, Tune Up RMB, Spooring, Ban, Kaki-kaki, AC.
+
         Candidate: ${profile.name} (Position: ${role})
         
         DATA POINTS:

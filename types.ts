@@ -95,8 +95,19 @@ export interface AppSettings {
    requireMicrophone: boolean; // NEW: Toggle Mic Requirement
 }
 
+// --- SHARED BUSINESS CONTEXT ---
+const BUSINESS_CONTEXT = `
+CONTEXT & TERMINOLOGY (MOBENG):
+1. Toko, NOT Bengkel: Call the location "Toko" (Store), even if it's a workshop.
+2. Hierarchy: Mekanik -> Asst. Store Leader -> Store Leader -> Area Coordinator -> Regional Head.
+3. Products: Main service is "RMB" (Rasa Mesin Baru/Machine Tune Up). Exclusive oil is "X-TEN" (Ester based).
+4. Services: Oil change, Tune Up RMB, Spooring/Balancing, Tires, Undercarriage (Kaki-kaki), AC Service.
+`;
+
 // --- SHARED INSTRUCTION PROTOCOL ---
 const CRITICAL_EVALUATION_PROTOCOL = `
+${BUSINESS_CONTEXT}
+
 **CRITICAL EVALUATION PROTOCOL (STRICT MODE):**
 1. **BE SKEPTICAL**: Assume the candidate is trying to give "textbook answers" or "sweet talk" to please you. Your job is to expose their true depth.
 2. **REJECT GENERIC ANSWERS**: 
