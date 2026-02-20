@@ -222,7 +222,7 @@ const DocumentationModal: React.FC<DocumentationModalProps> = ({ isOpen, onClose
                   <div>
                     <h4 className="font-bold text-sm text-slate-800 mb-1">Prompt Engineering & Temperature</h4>
                     <p className="text-xs text-slate-600 leading-relaxed">
-                      Aplikasi menggunakan <code>systemInstruction</code> bertingkat untuk setiap role. Parameter <strong>Temperature diset ke 0.1</strong> (Realistic Mode) untuk mengurangi halusinasi dan memastikan penilaian AI konsisten, deterministik, dan faktual.
+                      Aplikasi menggunakan <code>systemInstruction</code> bertingkat untuk setiap role. Parameter <strong>Temperature diset ke 0.2</strong> (Balanced Realistic) untuk menjaga konsistensi namun tetap luwes dalam format JSON.
                     </p>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
