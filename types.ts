@@ -173,7 +173,9 @@ Anda sedang melakukan servis berkala. Saat membongkar, Anda menemukan *shockbrea
        - *Pass*: Admit limitation, ask for Manual Book or Guidance from Technical Leader via Phone. 
        - *Fail*: "Coba-coba" or "Gas aja".
 
-    After Scenario 5, set "isInterviewOver": true in the JSON.
+    **IMPORTANT:** 
+    DO NOT set "isInterviewOver": true UNTIL the candidate has answered Scenario 5.
+    You must strictly complete all 5 scenarios.
     ${JSON_OUTPUT_INSTRUCTION}`
    },
 
@@ -213,7 +215,9 @@ Saat Store Leader sedang cuti, Anda memegang kendali toko. Tiba-tiba di area ben
        - *Pass*: Extreme Ownership. Admit mistake ("Salah Saya"), Apologize, Arrange Towing, Fix it properly.
        - *Fail*: Blaming system, Denying responsibility.
 
-    After Scenario 5, set "isInterviewOver": true.
+    **IMPORTANT:** 
+    DO NOT set "isInterviewOver": true UNTIL the candidate has answered Scenario 5.
+    You must strictly complete all 5 scenarios.
     ${JSON_OUTPUT_INSTRUCTION}`
    },
 
@@ -253,7 +257,9 @@ Omzet toko bulan ini baru mencapai 60% padahal sudah tanggal 25. Di sisi lain, m
        - *Pass*: Data-driven optimism. "Evaluasi, Stop Blaming, Fokus sisa hari/bulan depan".
        - *Fail*: Angry ranting OR Empty "Semangat kakak" motivation.
 
-    After Scenario 5, set "isInterviewOver": true.
+    **IMPORTANT:** 
+    DO NOT set "isInterviewOver": true UNTIL the candidate has answered Scenario 5.
+    You must strictly complete all 5 scenarios.
     ${JSON_OUTPUT_INSTRUCTION}`
    },
 
@@ -293,7 +299,9 @@ Anda membawahi 5 Toko. Toko A salesnya tertinggi (150%) TAPI komplain pelanggann
        - *Pass*: Context dependent. High traffic needs Admin/Ops strength (B) to organize chaos, OR A provided there is a strong Asst. Justify clearly.
        - *Fail*: Picking without logic.
 
-    After Scenario 5, set "isInterviewOver": true.
+    **IMPORTANT:** 
+    DO NOT set "isInterviewOver": true UNTIL the candidate has answered Scenario 5.
+    You must strictly complete all 5 scenarios.
     ${JSON_OUTPUT_INSTRUCTION}`
    },
 
@@ -314,7 +322,7 @@ Revenue Region Anda turun 15% Year-on-Year (YoY). Kompetitor utama sedang melaku
        - *Fail*: Discounting, generic "Marketing", or "Praying".
 
     2. **Cost Efficiency**:
-       "COO memotong budget operasional 10% karena resesi. Anda harus memilih: (A) Kurangi Manpower/PHK, (B) Kurangi Insentif Mekanik, atau (C) Turunkan standar fasilitas customer (listrik/ac/snack)? Jelaskan rasionalisasinya."
+       "COO memotong budget operasional 10% karena resesi. Anda harus mengejar (A) Kurangi Manpower/PHK, (B) Kurangi Insentif Mekanik, atau (C) Turunkan standar fasilitas customer (listrik/ac/snack)? Jelaskan rasionalisasinya."
        - *Pass*: Option C (Optimized) or Waste Reduction first. Touching Manpower/Incentive kills the engine.
        - *Fail*: Cutting Incentive (B) = Suicide for retail.
 
@@ -333,7 +341,9 @@ Revenue Region Anda turun 15% Year-on-Year (YoY). Kompetitor utama sedang melaku
        - *Pass*: Extreme Accountability. "No excuse". Present specific 30-60-90 day turnaround plan.
        - *Fail*: Blaming market, blaming team, blaming economy.
 
-    After Scenario 5, set "isInterviewOver": true.
+    **IMPORTANT:** 
+    DO NOT set "isInterviewOver": true UNTIL the candidate has answered Scenario 5.
+    You must strictly complete all 5 scenarios.
     ${JSON_OUTPUT_INSTRUCTION}`
    }
 };

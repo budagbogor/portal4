@@ -171,10 +171,8 @@ export const generateFinalSummary = async (
   simFeedback: string,
   logicScore: number
 ): Promise<FinalAnalysisReport> => {
-  try {
-    const ai = await getGenAI();
-
-    const prompt = `
+  // 1. Define Prompt OUTSIDE try-catch to ensure availability for fallback
+  const prompt = `
         Role: Senior I/O Psychologist & Elite Recruiter (Google Standard).
         Task: Conduct a high-level candidate assessment using the "Google Hiring Attributes" framework.
         
@@ -258,11 +256,14 @@ export const generateFinalSummary = async (
             "cultureFitScore": number,
             "starMethodScore": number
         }
-        `;
+    `;
+
+  try {
+    const ai = await getGenAI();
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.0-flash', // UPGRADED MODEL
-      contents: prompt,
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: {
         responseMimeType: "application/json",
         temperature: 0.3,
@@ -275,31 +276,33 @@ export const generateFinalSummary = async (
       json = JSON.parse(jsonText);
     } catch (e) {
       console.error("Failed to parse final summary JSON", e);
-      throw e;
+      // Try to clean markdown
+      const cleanText = jsonText.replace(/```json\s*|\s*```/g, '').trim();
+      json = JSON.parse(cleanText);
     }
 
     return {
       summary: json.summary || "Analisa tidak tersedia.",
       psychometrics: {
-        openness: json.psychometrics.openness,
-        conscientiousness: json.psychometrics.conscientiousness,
-        extraversion: json.psychometrics.extraversion,
-        agreeableness: json.psychometrics.agreeableness,
-        neuroticism: json.psychometrics.emotionalStability
+        openness: json.psychometrics?.openness || 50,
+        conscientiousness: json.psychometrics?.conscientiousness || 50,
+        extraversion: json.psychometrics?.extraversion || 50,
+        agreeableness: json.psychometrics?.agreeableness || 50,
+        neuroticism: json.psychometrics?.emotionalStability || 50
       },
-      cultureFitScore: json.cultureFitScore,
-      starMethodScore: json.starMethodScore
+      cultureFitScore: json.cultureFitScore || 50,
+      starMethodScore: json.starMethodScore || 5
     };
 
   } catch (error) {
-    console.error("Gemini Final Summary Error, Try NVIDIA:", error);
+    console.warn("Gemini Final Summary Error, Try NVIDIA:", error);
 
     // Fallback logic for Final Summary
     try {
       const nvidia = await getNvidiaAI();
       const completion = await nvidia.chat.completions.create({
         model: "meta/llama-3.1-70b-instruct",
-        messages: [{ role: 'user', content: prompt } as any], // Prompt contains Role/Task inside
+        messages: [{ role: 'user', content: prompt }], // Prompt contains Role/Task inside
         temperature: 0.3,
         max_tokens: 2048
       });
@@ -308,18 +311,32 @@ export const generateFinalSummary = async (
       const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/);
       const jsonStr = jsonMatch ? jsonMatch[1] : responseText;
 
-      const json = JSON.parse(jsonStr);
+      let json;
+      try {
+        json = JSON.parse(jsonStr);
+      } catch (e) {
+        // If JSON parse fails, check if the raw text is actually just the summary
+        console.warn("NVIDIA JSON Parse Error on Summary", e);
+        // Fallback: Use the whole text as summary
+        json = {
+          summary: responseText.substring(0, 1000), // Limit length
+          psychometrics: { openness: 50, conscientiousness: 50, extraversion: 50, agreeableness: 50, neuroticism: 50 },
+          cultureFitScore: 50,
+          starMethodScore: 5
+        };
+      }
+
       return {
-        summary: json.summary || "Analisa NVIDIA tersedia.",
-        psychometrics: json.psychometrics,
-        cultureFitScore: json.cultureFitScore,
-        starMethodScore: json.starMethodScore
+        summary: json.summary || responseText.substring(0, 500) + "...",
+        psychometrics: json.psychometrics || { openness: 50, conscientiousness: 50, extraversion: 50, agreeableness: 50, neuroticism: 50 },
+        cultureFitScore: json.cultureFitScore || 50,
+        starMethodScore: json.starMethodScore || 5
       };
 
     } catch (nvErr) {
       console.error("NVIDIA Final Summary Error:", nvErr);
       return {
-        summary: "Gagal membuat analisa (All AI Failed).",
+        summary: "Gagal membuat analisa (All AI Failed). Mohon cek koneksi atau API Key.",
         psychometrics: { openness: 50, conscientiousness: 50, extraversion: 50, agreeableness: 50, neuroticism: 50 },
         cultureFitScore: 50,
         starMethodScore: 5

@@ -455,8 +455,14 @@ function App() {
 
             if (response.analysis) {
                 setCurrentAnalysis(response.analysis);
-                if (response.analysis.isInterviewOver) {
+
+                // CLIENT-SIDE GUARD: Ensure at least 5 user messages/answers before ending
+                const userMsgCount = (newHistory || []).filter(m => m.sender === Sender.USER).length;
+
+                if (response.analysis.isInterviewOver && userMsgCount >= 5) {
                     setTimeout(() => setShowSimFinishModal(true), 1500);
+                } else if (response.analysis.isInterviewOver && userMsgCount < 5) {
+                    console.warn(`AI tried to end early (Turn ${userMsgCount}/5). Ignoring termination signal.`);
                 }
             }
         } catch (error) {
@@ -637,13 +643,28 @@ function App() {
 
                 if (data.user) {
                     // Check Role
-                    const { data: profile } = await supabase
-                        .from('profiles')
-                        .select('role')
-                        .eq('id', data.user.id)
-                        .single();
+                    try {
+                        const { data: profile, error: profileError } = await supabase
+                            .from('profiles')
+                            .select('role')
+                            .eq('id', data.user.id)
+                            .maybeSingle(); // Changed from single() to maybeSingle() to avoid 406 on missing rows
 
-                    if (profile) setCurrentUserRole(profile.role as any);
+                        if (profileError) {
+                            console.warn("Profile fetch error (ignoring):", profileError);
+                            // Default to recruiter if profile missing or error
+                            setCurrentUserRole('recruiter');
+                        } else if (profile) {
+                            setCurrentUserRole(profile.role as any);
+                        } else {
+                            // No profile found
+                            setCurrentUserRole('recruiter');
+                        }
+                    } catch (err) {
+                        console.error("Unexpected profile fetch error:", err);
+                        setCurrentUserRole('recruiter');
+                    }
+
                     setCurrentView('recruiter_dashboard');
                 }
             }
