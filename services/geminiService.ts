@@ -319,7 +319,7 @@ export const generateFinalSummary = async (
         console.warn("NVIDIA JSON Parse Error on Summary", e);
         // Fallback: Use the whole text as summary
         json = {
-          summary: responseText.substring(0, 1000), // Limit length
+          summary: responseText.substring(0, 4000), // Increased Limit to 4000 chars
           psychometrics: { openness: 50, conscientiousness: 50, extraversion: 50, agreeableness: 50, neuroticism: 50 },
           cultureFitScore: 50,
           starMethodScore: 5
@@ -327,7 +327,7 @@ export const generateFinalSummary = async (
       }
 
       return {
-        summary: json.summary || responseText.substring(0, 500) + "...",
+        summary: json.summary || responseText.substring(0, 4000) + "...", // Increased Limit
         psychometrics: json.psychometrics || { openness: 50, conscientiousness: 50, extraversion: 50, agreeableness: 50, neuroticism: 50 },
         cultureFitScore: json.cultureFitScore || 50,
         starMethodScore: json.starMethodScore || 5
