@@ -32,11 +32,43 @@ This repository is configured with GitHub Actions.
 - **Architecture**: Builds the React app and uploads to VPS (`/var/www/html`) via SSH.
 - **Secrets Required**: `HOST`, `USERNAME`, `PASSWORD` (Configured in GitHub Repo Settings).
 
+## Deploy ke Vercel
+
+> [!IMPORTANT]
+> **White screen di production** biasanya disebabkan oleh Environment Variables yang belum dikonfigurasi di Vercel. File `.env` ada di `.gitignore` dan **tidak ter-upload ke GitHub**, jadi Vercel perlu dikonfigurasi secara manual.
+
+### Langkah-langkah:
+
+1. Buka **Vercel Dashboard → Project → Settings → Environment Variables**
+2. Tambahkan variabel berikut:
+
+   | Name | Keterangan |
+   |------|------------|
+   | `VITE_SUPABASE_URL` | URL project Supabase Anda |
+   | `VITE_SUPABASE_ANON_KEY` | Anon Key dari Supabase |
+   | `VITE_NVIDIA_API_KEY` | (Opsional) API Key NVIDIA untuk fallback AI |
+
+3. Pastikan **Environment** dipilih: `Production`, `Preview`, dan `Development`
+4. Klik **Save**
+5. Klik **Deployments → Redeploy** agar perubahan aktif
+
+---
+
 ## Run Locally
 
 **Prerequisites:** Node.js
 
 1. Install dependencies:
-   `npm install`
-2. Run the app:
-   `npm run dev`
+   ```
+   npm install
+   ```
+2. Buat file `.env` di root project (salin dari `.env.example`):
+   ```
+   VITE_SUPABASE_URL=https://xxxx.supabase.co
+   VITE_SUPABASE_ANON_KEY=eyJhbGci...
+   VITE_NVIDIA_API_KEY=nvapi-...
+   ```
+3. Jalankan app:
+   ```
+   npm run dev
+   ```
