@@ -87,12 +87,17 @@ export interface RoleDefinition {
    systemInstruction: string;
 }
 
+export type AIProvider = 'gemini' | 'nvidia' | 'sumopod' | 'openrouter';
+
 export interface AppSettings {
    activeRole: RoleType;
    activeLogicSetId: string; // NEW: Controls which question set is served
    allowCandidateViewScore: boolean; // false = Concentration Mode (Blind), true = Transparent
    requireCamera: boolean; // NEW: Toggle Camera Requirement
    requireMicrophone: boolean; // NEW: Toggle Mic Requirement
+   aiProvider: AIProvider; // NEW: Selected AI Provider
+   sumopodModel: string; // NEW: Selected SumoPod Model
+   openrouterAutoSwitch: boolean; // NEW: OpenRouter Auto-switch free models
 }
 
 // --- SHARED BUSINESS CONTEXT ---

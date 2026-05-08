@@ -7,6 +7,16 @@ import { supabase } from "./supabaseClient";
 // Cache the keys in memory
 let cachedApiKey: string | null = null;
 let cachedNvidiaKey: string | null = null;
+let cachedOpenRouterKey: string | null = null;
+let cachedSumopodKey: string | null = null;
+
+export const SUMOPOD_MODELS = [
+  { id: 'gpt-4o', name: 'GPT-4o (Premium)' },
+  { id: 'gpt-4-turbo', name: 'GPT-4 Turbo' },
+  { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet' },
+  { id: 'llama-3.1-405b', name: 'Llama 3.1 405B' },
+  { id: 'mixtral-8x22b', name: 'Mixtral 8x22B' }
+];
 
 // Helper to get the AI instance dynamically (Async now)
 // Helper to get Gemini instance
@@ -22,6 +32,32 @@ const getGenAI = async () => {
   if (!finalKey) console.warn("Gemini API Key missing");
 
   return new GoogleGenAI({ apiKey: finalKey });
+};
+
+// Helper to get OpenRouter instance
+const getOpenRouterAI = async () => {
+  if (cachedOpenRouterKey) return new OpenAI({ apiKey: cachedOpenRouterKey, baseURL: 'https://openrouter.ai/api/v1', dangerouslyAllowBrowser: true });
+
+  try {
+    const { data } = await supabase.from('system_settings').select('value').eq('key', 'openrouter_api_key').single();
+    if (data?.value) cachedOpenRouterKey = data.value;
+  } catch (err) { console.warn("Supabase OpenRouter key fetch failed", err); }
+
+  const finalKey = cachedOpenRouterKey || (import.meta.env && import.meta.env.VITE_OPENROUTER_API_KEY) || '';
+  return new OpenAI({ apiKey: finalKey, baseURL: 'https://openrouter.ai/api/v1', dangerouslyAllowBrowser: true });
+};
+
+// Helper to get SumoPod instance (Assuming OpenAI compatible)
+const getSumopodAI = async () => {
+  if (cachedSumopodKey) return new OpenAI({ apiKey: cachedSumopodKey, baseURL: 'https://api.sumopod.com/v1', dangerouslyAllowBrowser: true });
+
+  try {
+    const { data } = await supabase.from('system_settings').select('value').eq('key', 'sumopod_api_key').single();
+    if (data?.value) cachedSumopodKey = data.value;
+  } catch (err) { console.warn("Supabase SumoPod key fetch failed", err); }
+
+  const finalKey = cachedSumopodKey || (import.meta.env && import.meta.env.VITE_SUMOPOD_API_KEY) || '';
+  return new OpenAI({ apiKey: finalKey, baseURL: 'https://api.sumopod.com/v1', dangerouslyAllowBrowser: true });
 };
 
 // Helper to get NVIDIA instance
@@ -99,20 +135,136 @@ const sendMessageToNvidia = async (
   }
 };
 
+const sendMessageToOpenRouter = async (
+  history: Message[],
+  latestUserMessage: string,
+  systemInstruction: string,
+  autoSwitch: boolean = false
+): Promise<{ text: string; analysis: AnalysisResult | null }> => {
+  const or = await getOpenRouterAI();
+  let model = "google/gemini-flash-1.5-8b"; // Default
+
+  if (autoSwitch) {
+    try {
+      const resp = await fetch('https://openrouter.ai/api/v1/models');
+      const data = await resp.json();
+      const freeModels = data.data.filter((m: any) => 
+        m.id.includes(':free') || (m.pricing && m.pricing.prompt === "0")
+      );
+      if (freeModels.length > 0) {
+        // Pick a free model, prefer gemini or llama
+        const preferred = freeModels.find((m: any) => m.id.includes('gemini') || m.id.includes('llama-3.1-8b'));
+        model = preferred ? preferred.id : freeModels[0].id;
+        console.log("OpenRouter Auto-Switch: Using free model", model);
+      }
+    } catch (e) {
+      console.warn("OpenRouter model fetch failed, using default", e);
+    }
+  }
+
+  const messages = [
+    { role: 'system', content: systemInstruction },
+    ...history.slice(0, -1).map(msg => ({
+      role: msg.sender === Sender.USER ? 'user' : 'assistant',
+      content: msg.text
+    } as any)),
+    { role: 'user', content: latestUserMessage }
+  ];
+
+  try {
+    const completion = await or.chat.completions.create({
+      model: model,
+      messages: messages,
+      temperature: 0.2,
+    });
+    return parseOpenAIResponse(completion.choices[0]?.message?.content || "");
+  } catch (error: any) {
+    console.error("OpenRouter API Error:", error);
+    throw error;
+  }
+};
+
+const sendMessageToSumopod = async (
+  history: Message[],
+  latestUserMessage: string,
+  systemInstruction: string,
+  model: string
+): Promise<{ text: string; analysis: AnalysisResult | null }> => {
+  const sp = await getSumopodAI();
+  const messages = [
+    { role: 'system', content: systemInstruction },
+    ...history.slice(0, -1).map(msg => ({
+      role: msg.sender === Sender.USER ? 'user' : 'assistant',
+      content: msg.text
+    } as any)),
+    { role: 'user', content: latestUserMessage }
+  ];
+
+  try {
+    const completion = await sp.chat.completions.create({
+      model: model || "gpt-4o",
+      messages: messages,
+      temperature: 0.2,
+    });
+    return parseOpenAIResponse(completion.choices[0]?.message?.content || "");
+  } catch (error: any) {
+    console.error("SumoPod API Error:", error);
+    throw error;
+  }
+};
+
+const parseOpenAIResponse = (responseText: string): { text: string; analysis: AnalysisResult | null } => {
+  const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/);
+  let analysis: AnalysisResult | null = null;
+  let cleanText = responseText;
+
+  if (jsonMatch && jsonMatch[1]) {
+    try {
+      analysis = JSON.parse(jsonMatch[1]);
+      cleanText = responseText.replace(/```json\s*[\s\S]*?\s*```/, '').trim();
+    } catch (e) {
+      console.error("JSON Parse Error", e);
+    }
+  }
+  return { text: cleanText, analysis };
+};
+
 export const sendMessageToGemini = async (
   history: Message[],
   latestUserMessage: string,
   systemInstruction: string
 ): Promise<{ text: string; analysis: AnalysisResult | null }> => {
-  try {
-    // Create instance dynamically
-    const ai = await getGenAI();
+  // Check settings for provider
+  let provider = 'gemini';
+  let sumopodModel = 'gpt-4o';
+  let orAutoSwitch = false;
 
+  try {
+    const { data: settings } = await supabase.from('system_settings').select('key, value');
+    const p = settings?.find(s => s.key === 'ai_provider')?.value;
+    if (p) provider = p;
+    const m = settings?.find(s => s.key === 'sumopod_model')?.value;
+    if (m) sumopodModel = m;
+    const as = settings?.find(s => s.key === 'openrouter_auto_switch')?.value;
+    if (as === 'true') orAutoSwitch = true;
+  } catch (e) { console.warn("Failed to load AI provider settings", e); }
+
+  try {
+    if (provider === 'openrouter') {
+      return await sendMessageToOpenRouter(history, latestUserMessage, systemInstruction, orAutoSwitch);
+    } else if (provider === 'sumopod') {
+      return await sendMessageToSumopod(history, latestUserMessage, systemInstruction, sumopodModel);
+    } else if (provider === 'nvidia') {
+      return await sendMessageToNvidia(history, latestUserMessage, systemInstruction);
+    }
+
+    // Default: Gemini
+    const ai = await getGenAI();
     const chat = ai.chats.create({
-      model: "gemini-2.0-flash", // UPGRADED MODEL for better reasoning
+      model: "gemini-2.0-flash",
       config: {
         systemInstruction: systemInstruction,
-        temperature: 0.2, // SLIGHTLY INCREASED TO 0.2 FOR BETTER FORMATTING ADHERENCE
+        temperature: 0.2,
       },
       history: history.slice(0, -1).map(msg => ({
         role: msg.sender === Sender.USER ? 'user' : 'model',
@@ -120,40 +272,59 @@ export const sendMessageToGemini = async (
       }))
     });
 
-    const result = await chat.sendMessage({
-      message: latestUserMessage
-    });
-
+    const result = await chat.sendMessage({ message: latestUserMessage });
     const responseText = result.text || '';
-
-    const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/);
-    let analysis: AnalysisResult | null = null;
-    let cleanText = responseText;
-
-    if (jsonMatch && jsonMatch[1]) {
-      try {
-        analysis = JSON.parse(jsonMatch[1]);
-        cleanText = responseText.replace(/```json\s*[\s\S]*?\s*```/, '').trim();
-      } catch (e) {
-        console.error("Failed to parse analysis JSON", e);
-      }
-    }
-
-    return {
-      text: cleanText,
-      analysis: analysis
-    };
+    return parseOpenAIResponse(responseText);
 
   } catch (error: any) {
-    console.error("Gemini API Error, switching to NVIDIA:", error);
+    console.error(`${provider} API Error, switching to NVIDIA fallback:`, error);
     try {
       return await sendMessageToNvidia(history, latestUserMessage, systemInstruction);
     } catch (nvidiaError: any) {
       return {
-        text: "Maaf, sistem sedang sibuk (Gemini & NVIDIA Fail). " + (nvidiaError.message || ""),
+        text: "Maaf, sistem sedang sibuk (Semua AI Fail). " + (nvidiaError.message || ""),
         analysis: null
       };
     }
+  }
+};
+
+export const testAIConnection = async (provider: string, apiKey: string, model?: string): Promise<{ success: boolean; message: string }> => {
+  try {
+    if (provider === 'gemini') {
+      const ai = new GoogleGenAI({ apiKey });
+      const modelInst = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const result = await modelInst.generateContent("Hi, test connection. Reply with 'OK'");
+      return { success: true, message: result.response.text().substring(0, 50) };
+    } else if (provider === 'openrouter') {
+      const or = new OpenAI({ apiKey, baseURL: 'https://openrouter.ai/api/v1', dangerouslyAllowBrowser: true });
+      const completion = await or.chat.completions.create({
+        model: "google/gemini-flash-1.5-8b",
+        messages: [{ role: 'user', content: 'Hi' }],
+        max_tokens: 10
+      });
+      return { success: true, message: "Connected: " + completion.choices[0]?.message?.content };
+    } else if (provider === 'sumopod') {
+      const sp = new OpenAI({ apiKey, baseURL: 'https://api.sumopod.com/v1', dangerouslyAllowBrowser: true });
+      const completion = await sp.chat.completions.create({
+        model: model || "gpt-4o",
+        messages: [{ role: 'user', content: 'Hi' }],
+        max_tokens: 10
+      });
+      return { success: true, message: "Connected: " + completion.choices[0]?.message?.content };
+    } else if (provider === 'nvidia') {
+      const proxyUrl = typeof window !== 'undefined' ? `${window.location.origin}/api/nvidia` : '/api/nvidia';
+      const nv = new OpenAI({ apiKey, baseURL: proxyUrl, dangerouslyAllowBrowser: true });
+      const completion = await nv.chat.completions.create({
+        model: "meta/llama-3.1-70b-instruct",
+        messages: [{ role: 'user', content: 'Hi' }],
+        max_tokens: 10
+      });
+      return { success: true, message: "Connected: " + completion.choices[0]?.message?.content };
+    }
+    return { success: false, message: "Provider tidak dikenal" };
+  } catch (e: any) {
+    return { success: false, message: e.message || "Connection failed" };
   }
 };
 
@@ -276,28 +447,78 @@ export const generateFinalSummary = async (
         IMPORTANT: You must output valid JSON ONLY. Do not output any markdown text outside the JSON object. The 'summary' field should contain the markdown text.
     `;
 
-  try {
-    const ai = await getGenAI();
+    // Check settings for provider
+    let provider = 'gemini';
+    let sumopodModel = 'gpt-4o';
+    let orAutoSwitch = false;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash', // UPGRADED MODEL
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      config: {
-        responseMimeType: "application/json",
-        temperature: 0.2, // INCREASED TO 0.2
-      }
-    });
-
-    const jsonText = response.text || '{}'; // Handle undefined
-    let json;
     try {
-      json = JSON.parse(jsonText);
-    } catch (e) {
-      console.error("Failed to parse final summary JSON", e);
-      // Try to clean markdown
-      const cleanText = jsonText.replace(/```json\s*|\s*```/g, '').trim();
-      json = JSON.parse(cleanText);
-    }
+      const { data: settings } = await supabase.from('system_settings').select('key, value');
+      const p = settings?.find(s => s.key === 'ai_provider')?.value;
+      if (p) provider = p;
+      const m = settings?.find(s => s.key === 'sumopod_model')?.value;
+      if (m) sumopodModel = m;
+      const as = settings?.find(s => s.key === 'openrouter_auto_switch')?.value;
+      if (as === 'true') orAutoSwitch = true;
+    } catch (e) { console.warn("Failed to load AI provider settings", e); }
+
+    let json;
+    let responseText = "";
+
+    try {
+      if (provider === 'openrouter') {
+        const or = await getOpenRouterAI();
+        let model = "google/gemini-pro-1.5-exp:free";
+        if (orAutoSwitch) {
+           // We already have a helper for this in sendMessageToOpenRouter, 
+           // but for simplicity here we use the same logic or just stick to a strong model for summary.
+           model = "google/gemini-flash-1.5"; 
+        }
+        const completion = await or.chat.completions.create({
+          model: model,
+          messages: [{ role: 'user', content: prompt }],
+          response_format: { type: "json_object" },
+          temperature: 0.2
+        });
+        responseText = completion.choices[0]?.message?.content || "{}";
+      } else if (provider === 'sumopod') {
+        const sp = await getSumopodAI();
+        const completion = await sp.chat.completions.create({
+          model: sumopodModel || "gpt-4o",
+          messages: [{ role: 'user', content: prompt }],
+          response_format: { type: "json_object" },
+          temperature: 0.2
+        });
+        responseText = completion.choices[0]?.message?.content || "{}";
+      } else if (provider === 'nvidia') {
+        const nv = await getNvidiaAI();
+        const completion = await nv.chat.completions.create({
+          model: "meta/llama-3.1-70b-instruct",
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.2
+        });
+        responseText = completion.choices[0]?.message?.content || "{}";
+      } else {
+        // Default: Gemini
+        const ai = await getGenAI();
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.0-flash',
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          config: {
+            responseMimeType: "application/json",
+            temperature: 0.2,
+          }
+        });
+        responseText = response.text || '{}';
+      }
+
+      try {
+        json = JSON.parse(responseText.replace(/```json\s*|\s*```/g, '').trim());
+      } catch (e) {
+        // Fallback for non-JSON or malformed
+        const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/);
+        json = JSON.parse(jsonMatch ? jsonMatch[1] : responseText);
+      }
 
     // Helper to normalize scores to 0-100 scale
     const norm = (val: number | undefined) => {

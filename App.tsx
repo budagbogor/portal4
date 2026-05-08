@@ -2,7 +2,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Message, Sender, AnalysisResult, CandidateSubmission, CandidateProfile, AppSettings, ROLE_DEFINITIONS, RoleType, BigFiveTraits, Profile } from './types';
-import { sendMessageToGemini, generateFinalSummary } from './services/geminiService';
+import { sendMessageToGemini, generateFinalSummary, testAIConnection, SUMOPOD_MODELS } from './services/geminiService';
 import { supabase } from './services/supabaseClient'; // Import Supabase Client
 import { LogicTest, QUESTION_SETS } from './components/LogicTest'; // Keep eager for constants
 import { Briefcase, CheckCircle2, ChevronRight, BarChart3, X, Zap, Lock, UserCircle2, ArrowLeft, BookOpen, HelpCircle, CheckCircle, Save, LogOut, Phone, GraduationCap, Building2, Printer, Share2, Settings, Sliders, MonitorPlay, FileText, MessageSquare, ExternalLink, BrainCircuit, ArrowRight, Loader2, Timer, AlertTriangle, Brain, Star, Sparkles, ShieldAlert, Server, UserPlus, Send, Ban, Eye, EyeOff, MousePointerClick, Smartphone, Globe, ShieldCheck, Trash2, ChevronDown, ChevronUp, Camera, Mic, Users, Key } from 'lucide-react';
@@ -44,13 +44,24 @@ function App() {
         activeLogicSetId: 'set_a',  // Default Question Set
         allowCandidateViewScore: false, // Default: Blind Mode (Can be toggled in settings)
         requireCamera: true, // Default: Camera Required
-        requireMicrophone: true // Default: Mic Required
+        requireMicrophone: true, // Default: Mic Required
+        aiProvider: 'gemini',
+        sumopodModel: 'gpt-4o',
+        openrouterAutoSwitch: false
     });
 
     // State for Settings Modal in Recruiter Dashboard
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [isAISettingsOpen, setIsAISettingsOpen] = useState(false);
+    const [isQRModalOpen, setIsQRModalOpen] = useState(false); // NEW: QR Modal
+    const [selectedQRRole, setSelectedQRRole] = useState<RoleType>('store_leader'); // NEW: QR Role
     const [isInviteOpen, setIsInviteOpen] = useState(false);
-    const [apiKeyInput, setApiKeyInput] = useState(''); // NEW: Local State for API Key Input
+    const [apiKeyInput, setApiKeyInput] = useState(''); // Gemini Key
+    const [nvidiaKeyInput, setNvidiaKeyInput] = useState('');
+    const [openRouterKeyInput, setOpenRouterKeyInput] = useState('');
+    const [sumopodKeyInput, setSumopodKeyInput] = useState('');
+    const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+    const [isTesting, setIsTesting] = useState(false);
 
     // --- RECRUITER AUTH STATE ---
     const [loginEmail, setLoginEmail] = useState('');
@@ -114,12 +125,21 @@ function App() {
     // Derived active definition
     const activeRoleDefinition = ROLE_DEFINITIONS[appSettings.activeRole];
 
-    // --- SHORT CODE VALIDATION SYSTEM (SUPABASE) ---
+    // --- SHORT CODE & QR ROLE VALIDATION SYSTEM (SUPABASE) ---
     useEffect(() => {
-        const validateInvitation = async () => {
+        const validateEntry = async () => {
             const queryParams = new URLSearchParams(window.location.search);
             const shortCode = queryParams.get('code');
+            const directRole = queryParams.get('role'); // NEW: Direct Role Entry via QR
 
+            // A. Handle Direct Role Entry (QR Code)
+            if (directRole && ROLE_DEFINITIONS[directRole as RoleType]) {
+                setAppSettings(prev => ({ ...prev, activeRole: directRole as RoleType }));
+                setCurrentView('candidate_intro'); // Go directly to intro
+                return;
+            }
+
+            // B. Handle Invitation Short Code
             if (shortCode) {
                 try {
                     // 1. Fetch invitation from Supabase
@@ -172,54 +192,106 @@ function App() {
                 }
             }
         };
-        validateInvitation();
+        validateEntry();
     }, []);
 
-    // --- LOAD API KEY (FROM SUPABASE) ---
+    // --- LOAD API KEY & SETTINGS (FROM SUPABASE) ---
     useEffect(() => {
-        const fetchApiKey = async () => {
+        const fetchSettings = async () => {
             try {
                 const { data } = await supabase
                     .from('system_settings')
-                    .select('value')
-                    .eq('key', 'gemini_api_key')
-                    .single();
+                    .select('key, value');
 
-                if (data && data.value) {
-                    setApiKeyInput(data.value);
-                } else {
-                    // Fallback check local for migration
-                    const local = localStorage.getItem('gemini_api_key');
-                    if (local) setApiKeyInput(local);
+                if (data) {
+                    data.forEach(item => {
+                        if (item.key === 'gemini_api_key') setApiKeyInput(item.value);
+                        if (item.key === 'nvidia_api_key') setNvidiaKeyInput(item.value);
+                        if (item.key === 'openrouter_api_key') setOpenRouterKeyInput(item.value);
+                        if (item.key === 'sumopod_api_key') setSumopodKeyInput(item.value);
+                        
+                        if (item.key === 'ai_provider') setAppSettings(prev => ({ ...prev, aiProvider: item.value as any }));
+                        if (item.key === 'sumopod_model') setAppSettings(prev => ({ ...prev, sumopodModel: item.value }));
+                        if (item.key === 'openrouter_auto_switch') setAppSettings(prev => ({ ...prev, openrouterAutoSwitch: item.value === 'true' }));
+                    });
                 }
             } catch (e) {
                 console.warn("Failed to load settings from DB");
             }
         };
-        fetchApiKey();
+        fetchSettings();
     }, []);
 
-    // --- SAVE API KEY HANDLER (TO SUPABASE) ---
+    // --- SAVE QUESTION SETTINGS HANDLER ---
     const handleSaveSettings = async () => {
         try {
-            const keyToSave = apiKeyInput.trim();
+            const settingsToSave = [
+                { key: 'active_logic_set_id', value: appSettings.activeLogicSetId },
+                { key: 'allow_candidate_view_score', value: appSettings.allowCandidateViewScore ? 'true' : 'false' },
+                { key: 'require_camera', value: appSettings.requireCamera ? 'true' : 'false' },
+                { key: 'require_microphone', value: appSettings.requireMicrophone ? 'true' : 'false' }
+            ];
 
-            // 1. Save to Supabase (GLOBAL for all users)
             const { error } = await supabase
                 .from('system_settings')
-                .upsert({ key: 'gemini_api_key', value: keyToSave });
+                .upsert(settingsToSave);
 
             if (error) throw error;
 
-            // 2. Clear local storage to avoid confusion
-            localStorage.removeItem('gemini_api_key');
-
             setIsSettingsOpen(false);
-            alert("Pengaturan dan API Key berhasil disimpan ke Database Global.\nSemua user sekarang akan menggunakan Key ini.");
+            alert("Pengaturan soal berhasil disimpan.");
         } catch (error: any) {
             console.error("Save error:", error);
-            alert("Gagal menyimpan ke database server: " + error.message);
+            alert("Gagal menyimpan pengaturan: " + error.message);
         }
+    };
+
+    // --- SAVE AI SETTINGS HANDLER ---
+    const handleSaveAISettings = async () => {
+        try {
+            const settingsToSave = [
+                { key: 'gemini_api_key', value: apiKeyInput.trim() },
+                { key: 'nvidia_api_key', value: nvidiaKeyInput.trim() },
+                { key: 'openrouter_api_key', value: openRouterKeyInput.trim() },
+                { key: 'sumopod_api_key', value: sumopodKeyInput.trim() },
+                { key: 'ai_provider', value: appSettings.aiProvider },
+                { key: 'sumopod_model', value: appSettings.sumopodModel },
+                { key: 'openrouter_auto_switch', value: appSettings.openrouterAutoSwitch ? 'true' : 'false' }
+            ];
+
+            const { error } = await supabase
+                .from('system_settings')
+                .upsert(settingsToSave);
+
+            if (error) throw error;
+
+            setIsAISettingsOpen(false);
+            alert("Konfigurasi AI berhasil disimpan ke Database Global.");
+        } catch (error: any) {
+            console.error("Save error:", error);
+            alert("Gagal menyimpan konfigurasi AI: " + error.message);
+        }
+    };
+
+    const handleTestConnection = async () => {
+        setIsTesting(true);
+        setTestResult(null);
+        
+        let key = '';
+        if (appSettings.aiProvider === 'gemini') key = apiKeyInput;
+        else if (appSettings.aiProvider === 'nvidia') key = nvidiaKeyInput;
+        else if (appSettings.aiProvider === 'openrouter') key = openRouterKeyInput;
+        else if (appSettings.aiProvider === 'sumopod') key = sumopodKeyInput;
+
+        if (!key) {
+            alert("Masukkan API Key terlebih dahulu!");
+            setIsTesting(false);
+            return;
+        }
+
+        const result = await testAIConnection(appSettings.aiProvider, key, appSettings.sumopodModel);
+        setTestResult(result);
+        setIsTesting(false);
     };
 
     // --- OPTIMIZED: FETCH SUBMISSIONS (DASHBOARD) ---
@@ -969,95 +1041,129 @@ function App() {
 
     // ... (Views)
 
-    // 7. USER MANAGEMENT (HC)
+    // 7. USER MANAGEMENT (HC) - Consolidated and Enhanced
     if (currentView === 'user_management') {
         return (
-            <div className="min-h-[100dvh] bg-slate-100 flex font-sans overflow-hidden">
-                {/* Sidebar (Duplicate for now - standard layout) */}
+            <div className="min-h-[100dvh] bg-slate-50 flex font-sans overflow-hidden">
+                {/* Sidebar */}
                 <div className="w-64 bg-mobeng-darkblue text-white flex flex-col shadow-2xl z-20 hidden md:flex">
                     <div className="p-6 border-b border-white/10">
                         <h1 className="text-xl font-bold tracking-tight">Mobeng <span className="text-mobeng-green">HR</span></h1>
-                        <p className="text-xs text-blue-200 mt-1">Human Capital Admin</p>
+                        <p className="text-xs text-blue-200 mt-1">Human Capital Control</p>
                     </div>
+
                     <nav className="flex-1 p-4 space-y-2">
-                        <button onClick={() => setCurrentView('recruiter_dashboard')} className="w-full text-left px-4 py-3 hover:bg-white/5 rounded-xl text-sm font-medium flex items-center gap-3 text-blue-100 transition-colors">
-                            <ArrowLeft size={18} /> Kembali ke Dashboard
+                        <button onClick={() => setCurrentView('recruiter_dashboard')} className="w-full text-left px-4 py-3 hover:bg-white/5 rounded-xl text-sm font-medium flex items-center gap-3 text-blue-100 transition-colors group">
+                            <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" /> Kembali ke Dashboard
                         </button>
-                        <div className="px-4 py-3 bg-white/10 rounded-xl text-sm font-bold flex items-center gap-3 border border-white/5 cursor-pointer">
-                            <Users size={18} className="text-mobeng-green" /> Manajemen User
+                        <div className="px-4 py-3 bg-white/10 rounded-xl text-sm font-bold flex items-center gap-3 border border-white/5 cursor-default text-white">
+                            <ShieldCheck size={18} className="text-mobeng-green" /> Manajemen User
                         </div>
                     </nav>
-                    <div className="p-4 border-t border-white/10">
-                        <button onClick={() => setCurrentView('role_selection')} className="flex items-center gap-2 text-xs text-blue-200 hover:text-white transition-colors">
+
+                    <div className="p-6 border-t border-white/10 bg-black/20">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 rounded-full bg-mobeng-blue flex items-center justify-center text-white font-bold border border-white/20">
+                                {loginEmail?.charAt(0).toUpperCase() || 'A'}
+                            </div>
+                            <div className="overflow-hidden">
+                                <p className="text-xs font-bold truncate text-white">{loginEmail || 'Admin'}</p>
+                                <p className="text-[10px] text-blue-200 uppercase font-bold tracking-wider">{currentUserRole?.replace('_', ' ') || 'Super Admin'}</p>
+                            </div>
+                        </div>
+                        <button onClick={() => setCurrentView('role_selection')} className="w-full flex items-center justify-center gap-2 text-xs py-2 rounded-lg bg-red-500/10 text-red-300 hover:bg-red-500/20 transition-colors border border-red-500/20">
                             <LogOut size={14} /> Keluar
                         </button>
                     </div>
                 </div>
 
                 {/* Main Content */}
-                <div className="flex-1 flex flex-col h-[100dvh] overflow-hidden p-8">
-                    <div className="flex justify-between items-center mb-8">
-                        <div>
-                            <h2 className="text-2xl font-bold text-slate-800">Manajemen Pengguna</h2>
-                            <p className="text-slate-500 text-sm mt-1">Kelola akses Recruiter dan Admin.</p>
+                <div className="flex-1 flex flex-col h-[100dvh] overflow-hidden">
+                    <div className="flex-1 overflow-auto p-4 md:p-8">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                            <div>
+                                <h2 className="text-3xl font-bold text-slate-800 tracking-tight">Manajemen Pengguna</h2>
+                                <p className="text-slate-500 text-sm mt-1">Kelola hak akses untuk Admin dan Recruiter sistem.</p>
+                            </div>
+                            <button
+                                onClick={copyRegisterLink}
+                                className="bg-mobeng-blue hover:bg-mobeng-darkblue text-white px-5 py-3 rounded-xl shadow-lg shadow-blue-900/10 text-sm font-bold flex items-center gap-2 transition-all active:scale-95"
+                            >
+                                <UserPlus size={18} /> Buat Link Registrasi
+                            </button>
                         </div>
-                        <button
-                            onClick={() => {
-                                const url = window.location.origin + window.location.pathname + '?action=register_admin';
-                                navigator.clipboard.writeText(url);
-                                alert("Link Registrasi berhasil disalin!\nKiriman link ini ke user baru:\n\n" + url);
-                            }}
-                            className="bg-mobeng-blue hover:bg-mobeng-darkblue text-white px-4 py-2.5 rounded-xl shadow-lg text-sm font-bold flex items-center gap-2 transition-all"
-                        >
-                            <UserPlus size={16} /> Salin Link Registrasi
-                        </button>
-                    </div>
 
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                        <table className="w-full text-left border-collapse">
-                            <thead className="bg-slate-50 border-b border-slate-200 text-xs text-slate-500 uppercase">
-                                <tr>
-                                    <th className="p-4">Email</th>
-                                    <th className="p-4">Nama Lengkap</th>
-                                    <th className="p-4">Role</th>
-                                    <th className="p-4">Terdaftar</th>
-                                    <th className="p-4 text-right">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 text-sm">
-                                {users.map(u => (
-                                    <tr key={u.id} className="hover:bg-slate-50">
-                                        <td className="p-4 font-semibold text-slate-800">{u.email}</td>
-                                        <td className="p-4 text-slate-600">{u.full_name || '-'}</td>
-                                        <td className="p-4">
-                                            <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-md text-xs font-bold border border-blue-200 uppercase">
-                                                {u.role.replace('_', ' ')}
-                                            </span>
-                                        </td>
-                                        <td className="p-4 text-slate-500 font-mono text-xs">
-                                            {new Date(u.created_at).toLocaleDateString()}
-                                        </td>
-                                        <td className="p-4 text-right">
-                                            <button
-                                                onClick={() => handleDeleteUser(u.id, u.email)}
-                                                className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition-colors"
-                                                title="Hapus User"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                                {users.length === 0 && (
-                                    <tr><td colSpan={5} className="p-8 text-center text-slate-400">Tidak ada data user.</td></tr>
-                                )}
-                            </tbody>
-                        </table>
+                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-slate-50 border-b border-slate-200 text-[10px] text-slate-500 uppercase tracking-widest font-black">
+                                            <th className="p-5">Informasi User</th>
+                                            <th className="p-5">Hak Akses (Role)</th>
+                                            <th className="p-5">Terdaftar Pada</th>
+                                            <th className="p-5 text-right">Tindakan</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {users.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={4} className="p-20 text-center">
+                                                    <div className="flex flex-col items-center justify-center text-slate-400">
+                                                        <Users size={48} className="mb-4 opacity-20" />
+                                                        <p className="font-medium">Belum ada data user lain yang terdaftar.</p>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            users.map(u => (
+                                                <tr key={u.id} className="hover:bg-slate-50/80 transition-colors group">
+                                                    <td className="p-5">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={`w-9 h-9 rounded-lg flex items-center justify-center font-bold text-sm ${u.role === 'super_admin' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
+                                                                {u.full_name?.charAt(0).toUpperCase() || u.email.charAt(0).toUpperCase()}
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-bold text-slate-800 text-sm">{u.full_name || 'Tanpa Nama'}</p>
+                                                                <p className="text-xs text-slate-500">{u.email}</p>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="p-5">
+                                                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${
+                                                            u.role === 'super_admin' 
+                                                            ? 'bg-amber-50 text-amber-700 border-amber-200' 
+                                                            : 'bg-blue-50 text-blue-700 border-blue-200'
+                                                        }`}>
+                                                            {u.role.replace('_', ' ')}
+                                                        </span>
+                                                    </td>
+                                                    <td className="p-5">
+                                                        <div className="text-xs font-medium text-slate-600">
+                                                            {new Date(u.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                                        </div>
+                                                    </td>
+                                                    <td className="p-5 text-right">
+                                                        <button
+                                                            onClick={() => handleDeleteUser(u.id, u.email)}
+                                                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                                            title="Hapus Akses"
+                                                        >
+                                                            <Trash2 size={18} />
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         )
     }
+
 
     // ... (Detail View Logic - SAME)
     if (selectedSubmission) {
@@ -1274,6 +1380,12 @@ function App() {
                         <button onClick={() => setIsSettingsOpen(true)} className="w-full text-left px-4 py-3 hover:bg-white/5 rounded-xl text-sm font-medium flex items-center gap-3 text-blue-100 transition-colors">
                             <Settings size={18} /> Pengaturan Soal
                         </button>
+                        <button onClick={() => setIsAISettingsOpen(true)} className="w-full text-left px-4 py-3 hover:bg-white/5 rounded-xl text-sm font-medium flex items-center gap-3 text-blue-100 transition-colors">
+                            <Brain size={18} className="text-mobeng-yellow" /> Konfigurasi AI
+                        </button>
+                        <button onClick={() => setIsQRModalOpen(true)} className="w-full text-left px-4 py-3 hover:bg-white/5 rounded-xl text-sm font-medium flex items-center gap-3 text-blue-100 transition-colors">
+                            <Globe size={18} className="text-emerald-400" /> Generate QR Code
+                        </button>
 
                         {/* HC MENU */}
                         <button onClick={() => setCurrentView('user_management')} className="w-full text-left px-4 py-3 hover:bg-white/5 rounded-xl text-sm font-medium flex items-center gap-3 text-blue-100 transition-colors">
@@ -1285,11 +1397,21 @@ function App() {
                         </button>
                     </nav>
 
-                    <div className="p-4 border-t border-white/10">
-                        <button onClick={() => setCurrentView('role_selection')} className="flex items-center gap-2 text-xs text-blue-200 hover:text-white transition-colors">
+                    <div className="p-6 border-t border-white/10 bg-black/20">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 rounded-full bg-mobeng-blue flex items-center justify-center text-white font-bold border border-white/20">
+                                {loginEmail?.charAt(0).toUpperCase() || 'A'}
+                            </div>
+                            <div className="overflow-hidden">
+                                <p className="text-xs font-bold truncate text-white">{loginEmail || 'Admin'}</p>
+                                <p className="text-[10px] text-blue-200 uppercase font-bold tracking-wider">{currentUserRole?.replace('_', ' ') || 'Recruiter'}</p>
+                            </div>
+                        </div>
+                        <button onClick={() => setCurrentView('role_selection')} className="w-full flex items-center justify-center gap-2 text-xs py-2 rounded-lg bg-red-500/10 text-red-300 hover:bg-red-500/20 transition-colors border border-red-500/20">
                             <LogOut size={14} /> Keluar
                         </button>
                     </div>
+
                 </div>
 
                 {/* Main Content */}
@@ -1428,29 +1550,12 @@ function App() {
                         <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-in zoom-in-95 duration-200">
                             <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
                                 <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                                    <Settings size={20} className="text-mobeng-blue" /> Konfigurasi Tes
+                                    <Settings size={20} className="text-mobeng-blue" /> Pengaturan Soal
                                 </h3>
                                 <button onClick={() => setIsSettingsOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
                             </div>
 
                             <div className="space-y-4">
-                                {/* API KEY CONFIGURATION */}
-                                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-2">
-                                        <Key size={14} className="text-yellow-600" /> Konfigurasi AI (API Key)
-                                    </label>
-                                    <input
-                                        type="password"
-                                        value={apiKeyInput}
-                                        onChange={(e) => setApiKeyInput(e.target.value)}
-                                        placeholder="Masukkan Gemini API Key (Optional)"
-                                        className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-mobeng-blue outline-none bg-white placeholder-slate-400 font-mono"
-                                    />
-                                    <p className="text-[10px] text-slate-500 mt-2 leading-tight">
-                                        Masukkan API Key Google Gemini pribadi Anda untuk mengaktifkan AI. <strong className='text-mobeng-green'>SETTING GLOBAL</strong>: Key ini akan disimpan di server dan digunakan oleh seluruh user/kandidat.
-                                    </p>
-                                </div>
-
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Paket Soal Logika (Aktif)</label>
                                     <select
@@ -1480,6 +1585,9 @@ function App() {
                                             <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-mobeng-green"></div>
                                         </div>
                                     </label>
+                                    <p className="text-[10px] text-slate-500 mt-2 italic">
+                                        Jika dimatikan, kandidat hanya melihat pesan "Data tersimpan" setelah tes selesai.
+                                    </p>
                                 </div>
 
                                 <div className="pt-4 border-t border-slate-100 space-y-3">
@@ -1497,14 +1605,14 @@ function App() {
                                                 onChange={(e) => setAppSettings(prev => ({ ...prev, requireCamera: e.target.checked }))}
                                                 className="sr-only peer"
                                             />
-                                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-mobeng-blue"></div>
+                                            <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-mobeng-green"></div>
                                         </div>
                                     </label>
 
                                     <label className="flex items-center justify-between cursor-pointer group">
                                         <div className="flex items-center gap-2">
                                             <Mic size={16} className="text-slate-500" />
-                                            <span className="text-sm font-bold text-slate-700">Wajib Microphone (Voice)</span>
+                                            <span className="text-sm font-bold text-slate-700">Wajib Microphone</span>
                                         </div>
                                         <div className="relative">
                                             <input
@@ -1513,24 +1621,133 @@ function App() {
                                                 onChange={(e) => setAppSettings(prev => ({ ...prev, requireMicrophone: e.target.checked }))}
                                                 className="sr-only peer"
                                             />
-                                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-mobeng-blue"></div>
+                                            <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-mobeng-green"></div>
                                         </div>
                                     </label>
                                 </div>
-                                <p className="text-xs text-slate-400 mt-2">
-                                    Jika dimatikan (default), kandidat hanya melihat pesan "Data tersimpan" setelah tes selesai.
-                                </p>
                             </div>
 
                             <div className="mt-8">
                                 <button onClick={handleSaveSettings} className="w-full bg-mobeng-darkblue text-white font-bold py-3 rounded-xl hover:bg-black transition-colors">
-                                    Simpan Perubahan
+                                    Simpan Pengaturan Soal
                                 </button>
                             </div>
                         </div>
                     </div>
-                )
-                }
+                )}
+
+                {/* AI SETTINGS MODAL */}
+                {isAISettingsOpen && (
+                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-in zoom-in-95 duration-200">
+                            <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
+                                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                    <Brain size={20} className="text-mobeng-yellow" /> Konfigurasi AI
+                                </h3>
+                                <button onClick={() => setIsAISettingsOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+                            </div>
+
+                            <div className="space-y-4">
+                                {/* AI PROVIDER SELECTION */}
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">AI Provider</label>
+                                    <select
+                                        value={appSettings.aiProvider}
+                                        onChange={(e) => setAppSettings(prev => ({ ...prev, aiProvider: e.target.value as any }))}
+                                        className="w-full border border-slate-300 rounded-xl p-3 text-sm bg-slate-50 focus:ring-2 focus:ring-mobeng-blue outline-none"
+                                    >
+                                        <option value="gemini">Google Gemini</option>
+                                        <option value="nvidia">NVIDIA Llama 3</option>
+                                        <option value="openrouter">OpenRouter (Multi-Model)</option>
+                                        <option value="sumopod">SumoPod (Custom)</option>
+                                    </select>
+                                </div>
+
+                                {/* DYNAMIC API KEY INPUT */}
+                                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-2">
+                                        <Key size={14} className="text-yellow-600" /> 
+                                        API Key ({appSettings.aiProvider.toUpperCase()})
+                                    </label>
+                                    <input
+                                        type="password"
+                                        value={
+                                            appSettings.aiProvider === 'gemini' ? apiKeyInput :
+                                            appSettings.aiProvider === 'nvidia' ? nvidiaKeyInput :
+                                            appSettings.aiProvider === 'openrouter' ? openRouterKeyInput :
+                                            sumopodKeyInput
+                                        }
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            if (appSettings.aiProvider === 'gemini') setApiKeyInput(val);
+                                            else if (appSettings.aiProvider === 'nvidia') setNvidiaKeyInput(val);
+                                            else if (appSettings.aiProvider === 'openrouter') setOpenRouterKeyInput(val);
+                                            else setSumopodKeyInput(val);
+                                        }}
+                                        placeholder={`Masukkan ${appSettings.aiProvider} API Key`}
+                                        className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-mobeng-blue outline-none bg-white placeholder-slate-400 font-mono"
+                                    />
+                                    
+                                    {/* SUMOPOD MODEL SELECTION */}
+                                    {appSettings.aiProvider === 'sumopod' && (
+                                        <div className="mt-3">
+                                            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Pilih Model SumoPod</label>
+                                            <select
+                                                value={appSettings.sumopodModel}
+                                                onChange={(e) => setAppSettings(prev => ({ ...prev, sumopodModel: e.target.value }))}
+                                                className="w-full border border-slate-200 rounded-lg p-2 text-xs bg-white focus:ring-2 focus:ring-mobeng-blue outline-none"
+                                            >
+                                                {SUMOPOD_MODELS.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                                            </select>
+                                        </div>
+                                    )}
+
+                                    {/* OPENROUTER AUTO SWITCH */}
+                                    {appSettings.aiProvider === 'openrouter' && (
+                                        <div className="mt-3 flex items-center justify-between">
+                                            <label className="text-[10px] font-bold text-slate-500 uppercase">Auto-Switch Free Models</label>
+                                            <div className="relative">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={appSettings.openrouterAutoSwitch}
+                                                    onChange={(e) => setAppSettings(prev => ({ ...prev, openrouterAutoSwitch: e.target.checked }))}
+                                                    className="sr-only peer"
+                                                />
+                                                <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-mobeng-green"></div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* TEST CONNECTION BUTTON */}
+                                    <div className="mt-4">
+                                        <button 
+                                            onClick={handleTestConnection}
+                                            disabled={isTesting}
+                                            className="w-full py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors flex items-center justify-center gap-2"
+                                        >
+                                            {isTesting ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} className="text-mobeng-yellow" />}
+                                            Test Koneksi AI
+                                        </button>
+                                        {testResult && (
+                                            <div className={`mt-2 p-2 rounded text-[10px] ${testResult.success ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+                                                {testResult.success ? '✓ Berhasil: ' : '✗ Gagal: '} {testResult.message}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <p className="text-[10px] text-slate-500 mt-2 leading-tight italic text-center">
+                                    <ShieldCheck size={10} className="inline mr-1" /> Konfigurasi AI ini berlaku secara Global untuk seluruh sistem rekrutmen.
+                                </p>
+                            </div>
+
+                            <div className="mt-8">
+                                <button onClick={handleSaveAISettings} className="w-full bg-mobeng-darkblue text-white font-bold py-3 rounded-xl hover:bg-black transition-colors">
+                                    Simpan Konfigurasi AI
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* INVITE MODAL - REMAINS THE SAME */}
                 {
@@ -1583,6 +1800,63 @@ function App() {
                         </div>
                     )
                 }
+
+                {/* QR CODE MODAL */}
+                {isQRModalOpen && (
+                    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                        <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden animate-in zoom-in-95 duration-200">
+                            <div className="bg-gradient-to-r from-emerald-600 to-teal-700 p-6 text-white text-center relative">
+                                <Globe size={32} className="mx-auto mb-2 opacity-50" />
+                                <h3 className="text-xl font-bold">QR Code Pendaftaran</h3>
+                                <p className="text-emerald-100 text-xs mt-1">Scan untuk masuk ke posisi tertentu</p>
+                                <button onClick={() => setIsQRModalOpen(false)} className="absolute top-4 right-4 text-white/70 hover:text-white"><X size={20} /></button>
+                            </div>
+
+                            <div className="p-6 space-y-6">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2 text-center">Pilih Jabatan / Target Posisi</label>
+                                    <select
+                                        value={selectedQRRole}
+                                        onChange={(e) => setSelectedQRRole(e.target.value as RoleType)}
+                                        className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold text-slate-700 bg-slate-50 focus:ring-2 focus:ring-emerald-500 outline-none"
+                                    >
+                                        {Object.values(ROLE_DEFINITIONS).map(role => (
+                                            <option key={role.id} value={role.id}>{role.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="bg-slate-50 rounded-2xl p-6 flex flex-col items-center justify-center border-2 border-dashed border-slate-200">
+                                    <div className="bg-white p-4 rounded-2xl shadow-sm mb-4">
+                                        <img 
+                                            src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(window.location.origin + '?role=' + selectedQRRole)}`}
+                                            alt="QR Code"
+                                            className="w-40 h-40"
+                                        />
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 text-center mb-4">
+                                        URL: <span className="font-mono text-[8px] break-all">{window.location.origin + '?role=' + selectedQRRole}</span>
+                                    </p>
+                                    <button 
+                                        onClick={() => {
+                                            const url = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(window.location.origin + '?role=' + selectedQRRole)}`;
+                                            window.open(url, '_blank');
+                                        }}
+                                        className="flex items-center gap-2 text-xs font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 px-4 py-2 rounded-full transition-colors"
+                                    >
+                                        <Printer size={14} /> Cetak / Download QR
+                                    </button>
+                                </div>
+
+                                <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                                    <p className="text-[10px] text-blue-700 leading-relaxed">
+                                        <strong>Tips:</strong> Cetak QR Code ini dan tempel di meja pendaftaran atau poster lowongan. Kandidat yang memindai akan langsung diarahkan ke tes <strong>{ROLE_DEFINITIONS[selectedQRRole].label}</strong> tanpa harus memilih posisi lagi.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
             </div >
         );
@@ -1896,57 +2170,8 @@ function App() {
         );
     }
 
-    // 9. USER MANAGEMENT
-    if (currentView === 'user_management') {
-        return (
-            <div className="min-h-[100dvh] bg-slate-100 flex font-sans overflow-hidden">
-                <div className="flex-1 flex flex-col h-[100dvh] overflow-hidden">
-                    <div className="p-8">
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-2xl font-bold text-slate-800">Manajemen Pengguna (Admin)</h2>
-                            <div className="flex gap-2">
-                                <button onClick={() => setCurrentView('recruiter_dashboard')} className="px-4 py-2 text-slate-600 hover:text-slate-800 font-bold border border-slate-300 rounded-lg bg-white">Kembali ke Dashboard</button>
-                                <button onClick={copyRegisterLink} className="bg-mobeng-blue text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-mobeng-darkblue flex items-center gap-2">
-                                    <UserPlus size={16} /> Salin Link Registrasi
-                                </button>
-                            </div>
-                        </div>
+    // REDUNDANT BLOCK REMOVED (Consolidated above)
 
-                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                            <table className="w-full text-left">
-                                <thead className="bg-slate-50 border-b border-slate-200 text-xs uppercase text-slate-500 font-bold">
-                                    <tr>
-                                        <th className="p-4">Email</th>
-                                        <th className="p-4">Role</th>
-                                        <th className="p-4">Created At</th>
-                                        <th className="p-4 text-right">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {users.length === 0 ? (
-                                        <tr><td colSpan={4} className="p-8 text-center text-slate-400">Tidak ada data user.</td></tr>
-                                    ) : (
-                                        users.map(u => (
-                                            <tr key={u.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
-                                                <td className="p-4 font-medium text-slate-900">{u.email}</td>
-                                                <td className="p-4"><span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-bold uppercase">{u.role}</span></td>
-                                                <td className="p-4 text-slate-500 text-xs">{new Date(u.created_at).toLocaleDateString()}</td>
-                                                <td className="p-4 text-right">
-                                                    <button onClick={() => handleDeleteUser(u.id, u.email)} className="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-2 rounded-lg transition-colors">
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
 
     // 10. ROLE SELECTION (LANDING PAGE) - DEFAULT VIEW
     return (
@@ -1977,11 +2202,17 @@ function App() {
                 ))}
             </div>
 
-            <div className="mt-16 text-center">
-                <button onClick={() => setCurrentView('recruiter_login')} className="text-white/30 hover:text-white text-xs font-medium transition-colors flex items-center gap-2 mx-auto px-4 py-2 rounded-full hover:bg-white/5 border border-transparent hover:border-white/10">
-                    <Lock size={12} /> Admin Login
+            <div className="mt-16 text-center animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
+                <button 
+                    onClick={() => setCurrentView('recruiter_login')} 
+                    className="group relative overflow-hidden px-8 py-3 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 transition-all duration-300 backdrop-blur-md"
+                >
+                    <div className="flex items-center gap-2 text-white/50 group-hover:text-white transition-colors text-sm font-bold tracking-wide">
+                        <Lock size={16} className="text-mobeng-green group-hover:scale-110 transition-transform" /> 
+                        <span>Portal Admin Mobeng</span>
+                    </div>
                 </button>
-                <p className="text-white/10 text-[10px] mt-4">&copy; 2024 Mobeng Indonesia. Powered by Antigravity AI.</p>
+                <p className="text-white/20 text-[10px] mt-6 tracking-widest uppercase">&copy; 2024 Mobeng Indonesia. Powered by Antigravity AI.</p>
             </div>
         </div>
     );
