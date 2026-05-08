@@ -363,7 +363,7 @@ export const generateFinalSummary = async (
         
         ### POSITION-SPECIFIC FOCUS (CRITICAL):
         ${role.includes('Mekanik') ? '- FOCUS: Conscientiousness (Ketelitian), Manual Dexterity (Logika ruang), and Integrity.' : ''}
-        ${role.includes('Leader') ? '- FOCUS: Service Orientation, Sales Persuasion, and Operational Discipline.' : ''}
+        ${role.includes('Leader') ? '- FOCUS: Service Orientation, Sales Persuasion, and Operational Discipline. \n        - EVALUATION PRINCIPLES: Pelayanan tulus, ketegasan pada SOP kebersihan (Zero oil spills), optimisme dalam mencapai target, dan kemampuan teknis yang dijelaskan secara persuasif kepada orang awam.' : ''}
         ${role.includes('Coordinator') ? '- FOCUS: Multi-unit Management, Problem Solving, and Conflict Resolution.' : ''}
         ${role.includes('Head') ? '- FOCUS: Strategic Thinking, P&L Analysis, and High-level Leadership.' : ''}
 

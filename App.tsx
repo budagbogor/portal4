@@ -529,13 +529,14 @@ function App() {
             if (response.analysis) {
                 setCurrentAnalysis(response.analysis);
 
-                // CLIENT-SIDE GUARD: Ensure at least 5 user messages/answers before ending
+                // CLIENT-SIDE GUARD: Ensure enough user messages/answers before ending
                 const userMsgCount = (newHistory || []).filter(m => m.sender === Sender.USER).length;
+                const minExpectedTurns = appSettings.activeRole === 'store_leader' ? 10 : 5;
 
-                if (response.analysis.isInterviewOver && userMsgCount >= 5) {
+                if (response.analysis.isInterviewOver && userMsgCount >= minExpectedTurns) {
                     setTimeout(() => setShowSimFinishModal(true), 1500);
-                } else if (response.analysis.isInterviewOver && userMsgCount < 5) {
-                    console.warn(`AI tried to end early (Turn ${userMsgCount}/5). Ignoring termination signal.`);
+                } else if (response.analysis.isInterviewOver && userMsgCount < minExpectedTurns) {
+                    console.warn(`AI tried to end early (Turn ${userMsgCount}/${minExpectedTurns}). Ignoring termination signal.`);
                 }
             }
         } catch (error) {
