@@ -1,9 +1,14 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Project Reference - Trim whitespace to prevent "Invalid value" fetch errors
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL?.trim();
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
+// Project Reference - Clean quotes and trim whitespace to prevent "Invalid value" fetch errors
+const sanitizeEnv = (val: string | undefined) => {
+    if (!val) return '';
+    return val.trim().replace(/^["'](.+)["']$/, '$1');
+};
+
+const SUPABASE_URL = sanitizeEnv(import.meta.env.VITE_SUPABASE_URL);
+const SUPABASE_ANON_KEY = sanitizeEnv(import.meta.env.VITE_SUPABASE_ANON_KEY);
 
 // Debugging Environment Variables for Production/Vercel
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
@@ -13,11 +18,10 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     });
 } else {
     // Log helpful debug info without exposing full key
-    console.log("Supabase Initializing...", {
+    console.log("Supabase Client Initialized", {
         url: SUPABASE_URL,
-        keyPrefix: SUPABASE_ANON_KEY.substring(0, 10) + "...",
         keyLength: SUPABASE_ANON_KEY.length
     });
 }
 
-export const supabase = createClient(SUPABASE_URL || '', SUPABASE_ANON_KEY || '');
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
