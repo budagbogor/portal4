@@ -7,12 +7,12 @@
 This is the enhanced version of Mobeng Portal, optimized for VPS deployment with Global AI Key management.
 
 ## Key Features
-- **Multi-Provider AI**: Supports Google Gemini, SumoPod (Custom Models), and OpenRouter (with Auto-Switch Free Models).
-- **Global AI Settings**: Admin can configure AI providers and API keys globally for the entire organization.
-- **AI Connection Tester**: Built-in tool to verify AI API health before deployment.
-- **QR Code Invitations**: Generate role-specific QR codes for instant candidate registration via smartphone scan.
-- **CI/CD Deployment**: Automatic deployment to VPS via GitHub Actions on every push to `main`.
-- **System Settings**: Database-backed configuration table (`system_settings`) for all persistent app states.
+- **Multi-Provider AI**: Supports Google Gemini, SumoPod, and OpenRouter.
+- **Global AI Settings**: Admin can configure AI providers and API keys globally.
+- **AI Connection Tester**: Built-in tool to verify AI API health.
+- **QR Code Invitations**: Generate role-specific QR codes for instant registration.
+- **System Workflow**: Complete documentation of the recruiter and candidate journey [here](./SYSTEM_WORKFLOW.md).
+- **CI/CD Deployment**: Automatic deployment to VPS via GitHub Actions.
 
 ## Setup & Deployment
 
