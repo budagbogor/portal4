@@ -361,6 +361,12 @@ export const generateFinalSummary = async (
 
         Candidate: ${profile.name} (Position: ${role})
         
+        ### POSITION-SPECIFIC FOCUS (CRITICAL):
+        ${role.includes('Mekanik') ? '- FOCUS: Conscientiousness (Ketelitian), Manual Dexterity (Logika ruang), and Integrity.' : ''}
+        ${role.includes('Leader') ? '- FOCUS: Service Orientation, Sales Persuasion, and Operational Discipline.' : ''}
+        ${role.includes('Coordinator') ? '- FOCUS: Multi-unit Management, Problem Solving, and Conflict Resolution.' : ''}
+        ${role.includes('Head') ? '- FOCUS: Strategic Thinking, P&L Analysis, and High-level Leadership.' : ''}
+
         DATA POINTS:
         1. **General Cognitive Ability (GCA) Baseline**: ${logicScore.toFixed(1)}/10 (Logic Test Score)
         2. **Behavioral Competencies (SJT)**: Sales(${simScores.sales}), Leadership(${simScores.leadership}), Ops(${simScores.operations}), CX(${simScores.cx})

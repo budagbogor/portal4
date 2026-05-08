@@ -91,6 +91,8 @@ function App() {
     const [isLockedProfile, setIsLockedProfile] = useState(false);
 
     const [submissions, setSubmissions] = useState<CandidateSubmission[]>([]);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filterRole, setFilterRole] = useState('all');
     const [selectedSubmission, setSelectedSubmission] = useState<CandidateSubmission | null>(null);
     const [showChatLog, setShowChatLog] = useState(false); // NEW STATE for Chat Toggle
     const [isDetailLoading, setIsDetailLoading] = useState(false); // NEW: Loading state for detail fetch
@@ -1431,9 +1433,58 @@ function App() {
                                 <h2 className="text-2xl font-bold text-slate-800">Daftar Kandidat</h2>
                                 <p className="text-slate-500 text-sm mt-1">Real-time assessment results dari seluruh cabang.</p>
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap gap-2">
+                                <div className="relative group">
+                                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-mobeng-blue transition-colors" />
+                                    <input
+                                        type="text"
+                                        placeholder="Cari nama..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-mobeng-blue/20 focus:border-mobeng-blue transition-all w-48 md:w-64 shadow-sm"
+                                    />
+                                </div>
+                                <select
+                                    value={filterRole}
+                                    onChange={(e) => setFilterRole(e.target.value)}
+                                    className="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-mobeng-blue/20 focus:border-mobeng-blue transition-all shadow-sm font-medium text-slate-700"
+                                >
+                                    <option value="all">Semua Posisi</option>
+                                    {Object.entries(ROLE_DEFINITIONS).map(([id, def]) => (
+                                        <option key={id} value={def.label}>{def.label}</option>
+                                    ))}
+                                </select>
+                                <button
+                                    onClick={() => {
+                                        const csvRows = [
+                                            ["Waktu", "Nama", "Telepon", "Posisi", "Logic", "Culture", "Status"],
+                                            ...submissions.map(s => [
+                                                s.timestamp.toISOString(),
+                                                s.profile.name,
+                                                s.profile.phone,
+                                                s.role,
+                                                s.logicScore,
+                                                s.cultureFitScore,
+                                                s.status
+                                            ])
+                                        ];
+                                        const csvContent = csvRows.map(e => e.join(",")).join("\n");
+                                        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                                        const link = document.createElement("a");
+                                        const url = URL.createObjectURL(blob);
+                                        link.setAttribute("href", url);
+                                        link.setAttribute("download", `mobeng_candidates_${new Date().toISOString().slice(0, 10)}.csv`);
+                                        link.style.visibility = 'hidden';
+                                        document.body.appendChild(link);
+                                        link.click();
+                                        document.body.removeChild(link);
+                                    }}
+                                    className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 px-4 py-2.5 rounded-xl shadow-sm text-sm font-bold flex items-center gap-2 transition-all active:scale-95"
+                                >
+                                    <Share2 size={16} /> Export
+                                </button>
                                 <button onClick={() => setIsInviteOpen(true)} className="bg-mobeng-blue hover:bg-mobeng-darkblue text-white px-4 py-2.5 rounded-xl shadow-lg shadow-blue-900/10 text-sm font-bold flex items-center gap-2 transition-all active:scale-95">
-                                    <UserPlus size={16} /> Invite Candidate
+                                    <UserPlus size={16} /> Invite
                                 </button>
                             </div>
                         </div>
@@ -1499,7 +1550,15 @@ function App() {
                                                 <td colSpan={7} className="p-8 text-center text-slate-400">Belum ada data kandidat masuk.</td>
                                             </tr>
                                         ) : (
-                                            submissions.map((sub) => (
+                                            submissions
+                                                .filter(s => {
+                                                    const matchesSearch = 
+                                                        s.profile.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                                        s.profile.phone.includes(searchTerm);
+                                                    const matchesRole = filterRole === 'all' || s.role === filterRole;
+                                                    return matchesSearch && matchesRole;
+                                                })
+                                                .map((sub) => (
                                                 <tr key={sub.id} className="hover:bg-slate-50/80 transition-colors group">
                                                     <td className="p-4 text-slate-500 font-mono text-xs">
                                                         {sub.timestamp.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}
