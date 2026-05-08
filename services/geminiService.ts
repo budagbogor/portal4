@@ -293,9 +293,11 @@ export const testAIConnection = async (provider: string, apiKey: string, model?:
   try {
     if (provider === 'gemini') {
       const ai = new GoogleGenAI({ apiKey });
-      const modelInst = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
-      const result = await modelInst.generateContent("Hi, test connection. Reply with 'OK'");
-      return { success: true, message: result.response.text().substring(0, 50) };
+      const result = await ai.models.generateContent({
+        model: "gemini-1.5-flash",
+        contents: [{ role: 'user', parts: [{ text: "Hi, test connection. Reply with 'OK'" }] }]
+      });
+      return { success: true, message: result.text?.substring(0, 50) || "Success" };
     } else if (provider === 'openrouter') {
       const or = new OpenAI({ apiKey, baseURL: 'https://openrouter.ai/api/v1', dangerouslyAllowBrowser: true });
       const completion = await or.chat.completions.create({
