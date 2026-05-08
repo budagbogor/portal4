@@ -5,7 +5,7 @@ import { Message, Sender, AnalysisResult, CandidateSubmission, CandidateProfile,
 import { sendMessageToGemini, generateFinalSummary, testAIConnection, SUMOPOD_MODELS } from './services/geminiService';
 import { supabase } from './services/supabaseClient'; // Import Supabase Client
 import { LogicTest, QUESTION_SETS } from './components/LogicTest'; // Keep eager for constants
-import { Briefcase, CheckCircle2, ChevronRight, BarChart3, X, Zap, Lock, UserCircle2, ArrowLeft, BookOpen, HelpCircle, CheckCircle, Save, LogOut, Phone, GraduationCap, Building2, Printer, Share2, Settings, Sliders, MonitorPlay, FileText, MessageSquare, ExternalLink, BrainCircuit, ArrowRight, Loader2, Timer, AlertTriangle, Brain, Star, Sparkles, ShieldAlert, Server, UserPlus, Send, Ban, Eye, EyeOff, MousePointerClick, Smartphone, Globe, ShieldCheck, Trash2, ChevronDown, ChevronUp, Camera, Mic, Users, Key } from 'lucide-react';
+import { Briefcase, CheckCircle2, ChevronRight, BarChart3, X, Zap, Lock, UserCircle2, ArrowLeft, BookOpen, HelpCircle, CheckCircle, Save, LogOut, Phone, GraduationCap, Building2, Printer, Share2, Settings, Sliders, MonitorPlay, FileText, MessageSquare, ExternalLink, BrainCircuit, ArrowRight, Loader2, Timer, AlertTriangle, Brain, Star, Sparkles, ShieldAlert, Server, UserPlus, Send, Ban, Eye, EyeOff, MousePointerClick, Smartphone, Globe, ShieldCheck, Trash2, ChevronDown, ChevronUp, Camera, Mic, Users, Key, Search } from 'lucide-react';
 import { ExecutiveSummaryViewer } from './components/ExecutiveSummaryViewer'; // Import ExecutiveSummaryViewer for Dashboard
 
 // --- LAZY LOAD HEAVY COMPONENTS ---
