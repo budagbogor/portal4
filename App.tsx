@@ -742,8 +742,10 @@ function App() {
                 }
             }
         } catch (error: any) {
-            console.error("Auth Error:", error);
-            alert(`Gagal: ${error.message}`);
+            console.error("CRITICAL AUTH ERROR:", error);
+            // More detailed alert for debugging
+            const errorMsg = error.message || JSON.stringify(error);
+            alert(`Gagal Login: ${errorMsg}\n\nSaran: Pastikan URL & Key di Vercel Settings sudah benar (tanpa tanda kutip & spasi).`);
         } finally {
             setAuthLoading(false);
         }

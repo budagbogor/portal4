@@ -1,20 +1,23 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Project Reference derived from your JWT Token
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+// Project Reference - Trim whitespace to prevent "Invalid value" fetch errors
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL?.trim();
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
 
-// The Anon Key provided. 
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-// Debugging Environment Variables
+// Debugging Environment Variables for Production/Vercel
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     console.error("CRITICAL: Supabase URL or Anon Key is missing!", {
-        url: SUPABASE_URL,
-        key: SUPABASE_ANON_KEY ? "Set (Hidden)" : "Missing"
+        url: SUPABASE_URL ? "Exists" : "Missing",
+        key: SUPABASE_ANON_KEY ? "Exists" : "Missing"
     });
 } else {
-    console.log("Supabase Client Initialized with URL:", SUPABASE_URL);
+    // Log helpful debug info without exposing full key
+    console.log("Supabase Initializing...", {
+        url: SUPABASE_URL,
+        keyPrefix: SUPABASE_ANON_KEY.substring(0, 10) + "...",
+        keyLength: SUPABASE_ANON_KEY.length
+    });
 }
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+export const supabase = createClient(SUPABASE_URL || '', SUPABASE_ANON_KEY || '');
